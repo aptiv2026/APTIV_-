@@ -1776,9 +1776,12 @@
     }
 
     async function cloudConnect() {
-      const url = (byId('cloud-url').value || '').trim().replace(/\/+$/, '');
-      const key = (byId('cloud-key').value || '').trim();
-      const table = (byId('cloud-table').value || 'dispatch_state').trim();
+      let url = (byId('cloud-url')?.value || '').trim().replace(/\/+$/, '');
+      let key = (byId('cloud-key')?.value || '').trim();
+      let table = (byId('cloud-table')?.value || 'dispatch_state').trim();
+      // 입력란이 비어 있으면 저장된 설정으로 재연결 (한 번만 연결해도 이후는 자동)
+      if (!url && cloudCfg.url) url = cloudCfg.url;
+      if (!key && cloudCfg.key) key = cloudCfg.key;
       if (!url.startsWith('https://') || key.length < 20) {
         showToast('Project URL(https://...)과 anon key를 정확히 입력해 주세요.', 'warning');
         return;
@@ -1818,10 +1821,29 @@
       if (cloudOn) cloudPush().catch(() => {});
     };
 
-    // 자동 재연결
-    if (cloudCfg.url && cloudCfg.key) {
-      try { cloudConnect(); } catch (e) {}
+    // 자동 재연결 (새로고침·재접속 시 조용히 복구 — 모달·토스트 없음)
+    async function autoReconnect() {
+      if (!cloudCfg.url || !cloudCfg.key || cloudOn) return;
+      try {
+        await cloudApi('/rest/v1/' + (cloudCfg.table || 'dispatch_state') + '?id=eq.main&select=id');
+        cloudOn = true;
+        setCloudStatus('bg-slate-900/85 border-emerald-500 text-emerald-300', '클라우드 동기화 ON');
+        await cloudPull(true).catch(() => {});
+        await cloudPush().catch(() => {});
+        if (cloudTimer) clearInterval(cloudTimer);
+        cloudTimer = setInterval(async () => { await cloudPull(true).catch(() => {}); }, 7000);
+      } catch (e) {
+        setCloudStatus('bg-slate-900/85 border-amber-500 text-amber-300', '재연결 시도 중...');
+        setTimeout(autoReconnect, 15000);
+      }
     }
+    if (cloudCfg.url && cloudCfg.key) {
+      setCloudStatus('bg-slate-900/85 border-amber-500 text-amber-300', '재연결 시도 중...');
+      autoReconnect();
+    }
+
+    // 네트워크 복구 시 즉시 재연결
+    window.addEventListener('online', () => { if (cloudCfg.url && cloudCfg.key && !cloudOn) autoReconnect(); });
 
     // =====================================================================
     // BOOTSTRAP & URL (?car=차량번호)
