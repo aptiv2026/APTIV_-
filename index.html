@@ -1301,6 +1301,7 @@
       </div>
       <div class="flex flex-wrap gap-2">
         <button type="button" onclick="cloudConnect()" class="flex-1 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-extrabold">연결 및 동기화 시작</button>
+          <button type="button" onclick="copyDeviceLink()" class="flex-1 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-extrabold">📱 휴대폰 연결 링크 복사</button>
         <button type="button" onclick="cloudDisconnect()" class="py-2.5 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold">연결 해제</button>
       </div>
       <p id="cloud-msg" class="text-[11px] text-slate-500">연결 정보는 이 브라우저에만 저장되며 외부로 전송되지 않습니다. anon key는 공개 키라 안전합니다(서비스 키 service_role은 절대 사용 금지).</p>
@@ -2036,6 +2037,30 @@
         setTimeout(autoReconnect, 15000);
       }
     }
+    // URL ?cloud= 파라미터 → 새 기기(휴대폰) 첫 접속 시 설정 자동 저장 후 자동 연결
+    (function importCloudParam(){
+      try {
+        const m = (window.location.search || '').match(/[?&]cloud=([^&]+)/);
+        if (!m) return;
+        const cfg = JSON.parse(decodeURIComponent(escape(atob(m[1]))));
+        if (cfg.u && cfg.k) {
+          cloudCfg = { url: cfg.u, key: cfg.k, table: cfg.t || 'dispatch_state' };
+          localStorage.setItem(CLOUD_KEY, JSON.stringify(cloudCfg));
+          history.replaceState(null, '', window.location.pathname);
+        }
+      } catch (e) {}
+    })();
+
+    window.copyDeviceLink = function() {
+      if (!cloudCfg.url || !cloudCfg.key) { showToast('먼저 클라우드 연결을 완료해 주세요.', 'warning'); return; }
+      try {
+        const payload = btoa(unescape(encodeURIComponent(JSON.stringify({ u: cloudCfg.url, k: cloudCfg.key, t: cloudCfg.table || 'dispatch_state' }))));
+        const link = window.location.origin + window.location.pathname + '?cloud=' + payload;
+        copyTextFallback(link);
+        showToast('연결 링크를 복사했습니다. 휴대폰에서 열면 자동으로 동기화가 켜집니다.', 'success');
+      } catch (e) { showToast('링크 생성 실패: ' + e.message, 'error'); }
+    };
+
     if (cloudCfg.url && cloudCfg.key) {
       setCloudStatus('bg-slate-900/85 border-amber-500 text-amber-300', '재연결 시도 중...');
       autoReconnect();
@@ -4108,6 +4133,7 @@
       bootApp();
     }
   </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
