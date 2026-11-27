@@ -98,9 +98,12 @@
     <div class="max-w-7xl mx-auto px-3 sm:px-5 py-3 flex flex-wrap items-center justify-between gap-2.5">
       <!-- Brand Identity -->
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-aptiv-accent flex items-center justify-center font-extrabold text-white text-base shadow-md shrink-0">
-          KUM
+        <div id="header-logo-box" onclick="openLogoUpload()" oncontextmenu="resetLogoToDefault(event)" title="클릭: 로고 이미지 변경 / 우클릭: 기본 APTIV 로고로 초기화"
+          class="h-11 px-2 rounded-lg bg-white flex items-center justify-center shadow-md shrink-0 cursor-pointer overflow-hidden">
+          <img id="header-logo-img" class="h-9 w-auto object-contain block" alt="APTIV 로고" />
+          <span id="header-logo-text" class="hidden text-[10px] tracking-tight font-extrabold text-slate-900">APTIV</span>
         </div>
+        <input type="file" id="logo-file-input" accept="image/*" class="hidden" onchange="handleLogoFileChange(event)" />
         <div>
           <div class="flex flex-wrap items-center gap-1.5">
             <h1 id="header-company-name" class="text-sm sm:text-lg font-extrabold tracking-tight">케이유엠 유한책임회사</h1>
@@ -130,6 +133,12 @@
         <span id="pending-badge-top" class="hidden px-2.5 py-1.5 rounded-xl bg-amber-400 text-amber-950 text-xs font-extrabold flex items-center gap-1.5 shadow animate-pulse">
           <i class="fa-solid fa-bell"></i><span id="pending-badge-top-text">승인 대기 0건</span>
         </span>
+
+        <button type="button" id="header-leader-btn" onclick="handleHeaderLeaderClick()"
+          class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-white border border-slate-600 transition flex items-center gap-1.5 shadow">
+          <i id="header-leader-icon" class="fa-solid fa-user-tie text-sky-400"></i>
+          <span id="header-leader-label">팀장 모드</span>
+        </button>
 
         <button type="button" id="header-admin-btn" onclick="handleHeaderAdminClick()"
           class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-white border border-slate-600 transition flex items-center gap-1.5 shadow">
@@ -292,11 +301,16 @@
               </div>
             </div>
 
-            <!-- Requester & Passengers -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <!-- Requester & Department & Passengers -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label class="block text-xs font-extrabold text-slate-700 mb-1">신청자 <span class="text-rose-500">*</span></label>
                 <input type="text" id="disp-requester" required placeholder="예: 김민수"
+                  class="w-full px-3 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 focus:outline-none focus:border-aptiv-navy" />
+              </div>
+              <div>
+                <label class="block text-xs font-extrabold text-slate-700 mb-1">부서 <span class="text-rose-500">*</span></label>
+                <input type="text" id="disp-dept" required placeholder="예: 생산기술팀"
                   class="w-full px-3 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 focus:outline-none focus:border-aptiv-navy" />
               </div>
               <div>
@@ -306,18 +320,36 @@
               </div>
             </div>
 
-            <!-- Purpose/Destination & Manager -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div class="sm:col-span-2">
-                <label class="block text-xs font-extrabold text-slate-700 mb-1">출장 목적 / 목적지 <span class="text-rose-500">*</span></label>
-                <input type="text" id="disp-purpose" required placeholder="예: 충주공장 출장"
+            <!-- 출장 목적 / 목적지 분리 & 담당자 & 배차구분 자동 표시 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-extrabold text-slate-700 mb-1">출장 목적 <span class="text-rose-500">*</span></label>
+                <input type="text" id="disp-purpose" required placeholder="예: 고객사 품질 협의"
                   class="w-full px-3 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 focus:outline-none focus:border-aptiv-navy" />
               </div>
               <div>
-                <label class="block text-xs font-extrabold text-slate-700 mb-1">담당자 <span class="text-rose-500">*</span></label>
+                <label class="block text-xs font-extrabold text-slate-700 mb-1">목적지 <span class="text-rose-500">*</span></label>
+                <input type="text" id="disp-destination" required placeholder="예: 충주공장"
+                  class="w-full px-3 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 focus:outline-none focus:border-aptiv-navy" />
+              </div>
+              <div>
+                <label class="block text-xs font-extrabold text-slate-700 mb-1">담당자(공장) <span class="text-rose-500">*</span></label>
                 <select id="disp-manager" required
                   class="w-full px-3 py-2.5 text-sm font-bold rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-aptiv-navy"></select>
               </div>
+              <div>
+                <label class="block text-xs font-extrabold text-slate-700 mb-1">배차 구분 (수령/반납 시간 기준 자동)</label>
+                <div id="disp-type-preview"
+                  class="w-full px-3 py-2.5 text-xs font-extrabold rounded-xl bg-slate-50 border border-slate-200 text-slate-600">날짜를 선택하면 자동 계산됩니다</div>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-3 py-2.5">
+              <i class="fa-solid fa-clipboard-check text-indigo-500 mt-0.5 shrink-0"></i>
+              <p class="text-[11px] font-bold text-indigo-900 leading-relaxed">
+                승인 기준 — <strong>단기 배차(24시간 이내)</strong>: 각 공장 담당자 승인 /
+                <strong>장기 배차(24시간 초과)</strong>: 상위 팀장 승인
+              </p>
             </div>
 
             <!-- Remark -->
@@ -355,6 +387,12 @@
               <p class="text-xs text-slate-500">신청일·신청자·탑승자·수령/반납일시·배차차량·목적·담당자·반납(Y/N)·비고</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
+              <div class="flex rounded-xl overflow-hidden border border-slate-300 shadow-sm">
+                <button type="button" id="cal-view-btn" onclick="setDispatchView('calendar')"
+                  class="px-2.5 py-1.5 text-xs font-extrabold bg-aptiv-navy text-white">캘린더</button>
+                <button type="button" id="list-view-btn" onclick="setDispatchView('list')"
+                  class="px-2.5 py-1.5 text-xs font-extrabold bg-white text-slate-600 hover:bg-slate-100">목록</button>
+              </div>
               <input type="text" id="disp-search-input" oninput="renderDispatchLedger()" placeholder="신청자·차량·목적 검색"
                 class="px-3 py-1.5 text-xs rounded-xl border border-slate-300 bg-slate-50 focus:bg-white focus:outline-none focus:border-aptiv-navy" />
               <button type="button" onclick="exportDispatchCsv()"
@@ -365,15 +403,40 @@
             </div>
           </div>
 
-          <div class="overflow-x-auto max-h-[620px] overflow-y-auto">
+          <!-- 캘린더 뷰: 누가 / 무슨 차량 / 몇 시부터 예약했는지 한눈에 -->
+          <div id="dispatch-calendar-view" class="space-y-2">
+            <div class="flex items-center justify-between gap-2 bg-slate-50 rounded-xl px-2 py-1.5 border border-slate-200">
+              <button type="button" onclick="calMove(-1)"
+                class="w-8 h-8 rounded-lg bg-white hover:bg-slate-200 border border-slate-300 text-slate-700 font-extrabold">
+                <i class="fa-solid fa-chevron-left text-[11px]"></i>
+              </button>
+              <div id="cal-title" class="text-sm font-extrabold text-slate-900">2026년 11월</div>
+              <div class="flex items-center gap-1.5">
+                <button type="button" onclick="calToday()"
+                  class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-200 border border-slate-300 text-slate-700 text-[11px] font-extrabold">오늘</button>
+                <button type="button" onclick="calMove(1)"
+                  class="w-8 h-8 rounded-lg bg-white hover:bg-slate-200 border border-slate-300 text-slate-700 font-extrabold">
+                  <i class="fa-solid fa-chevron-right text-[11px]"></i>
+                </button>
+              </div>
+            </div>
+            <div id="dispatch-calendar-grid" class="grid grid-cols-7 gap-1"></div>
+            <p class="text-[11px] text-slate-500 font-bold">
+              각 일자에 <strong>수령시간 · 신청자 · 차량</strong>이 표시됩니다. 색상: 주황=승인대기 / 하늘=승인 / 파랑=운행중 / 초록=반납완료 · [장기] 표시는 24시간 초과 배차
+            </p>
+          </div>
+
+          <div id="dispatch-list-view" class="overflow-x-auto max-h-[620px] overflow-y-auto">
             <table class="w-full text-left border-collapse text-xs">
               <thead class="sticky top-0 z-10">
                 <tr class="bg-slate-100 text-slate-700 border-b border-slate-200">
                   <th class="py-2.5 px-2.5 font-extrabold whitespace-nowrap">신청일</th>
-                  <th class="py-2.5 px-2.5 font-extrabold whitespace-nowrap">신청자/탑승자</th>
+                  <th class="py-2.5 px-2.5 font-extrabold whitespace-nowrap">신청자/부서/탑승자</th>
                   <th class="py-2.5 px-2.5 font-extrabold whitespace-nowrap">수령 ~ 반납</th>
                   <th class="py-2.5 px-2.5 font-extrabold whitespace-nowrap">배차 차량</th>
-                  <th class="py-2.5 px-2.5 font-extrabold whitespace-nowrap">출장 목적/목적지</th>
+                  <th class="py-2.5 px-2.5 font-extrabold whitespace-nowrap">출장 목적</th>
+                  <th class="py-2.5 px-2.5 font-extrabold whitespace-nowrap">목적지</th>
+                  <th class="py-2.5 px-2.5 font-extrabold text-center whitespace-nowrap">구분</th>
                   <th class="py-2.5 px-2.5 font-extrabold whitespace-nowrap">담당자</th>
                   <th class="py-2.5 px-2.5 font-extrabold text-center whitespace-nowrap">반납</th>
                   <th class="py-2.5 px-2.5 font-extrabold whitespace-nowrap">비고/관리</th>
@@ -533,6 +596,16 @@
                   <label class="block text-[11px] font-extrabold text-slate-700 mb-1">비고</label>
                   <input type="text" id="arr-fuel-note" placeholder="예: 법인카드 결제" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300" />
                 </div>
+                <div>
+                  <label class="block text-[11px] font-extrabold text-slate-700 mb-1">주유 영수증 사진 <span class="text-rose-500">*</span> (미등록 시 운행 종료 불가)</label>
+                  <input type="file" accept="image/*" capture="environment" onchange="handleReceiptPick(event, 'arr-fuel-receipt-data', 'arr-fuel-receipt-preview')"
+                    class="w-full text-[11px] font-semibold rounded-lg border border-slate-300 px-2 py-1.5 bg-white" />
+                  <input type="hidden" id="arr-fuel-receipt-data" />
+                  <div id="arr-fuel-receipt-preview" class="hidden mt-1.5 flex items-center gap-1.5">
+                    <img onclick="viewReceiptData('arr-fuel-receipt-data')" class="w-12 h-12 object-cover rounded-lg border border-slate-300 cursor-pointer" alt="영수증 미리보기" />
+                    <button type="button" onclick="clearReceipt('arr-fuel-receipt-data', 'arr-fuel-receipt-preview')" class="text-[10px] font-bold text-rose-600">삭제</button>
+                  </div>
+                </div>
               </div>
             </div>
             <p id="arr-fuel-no-hint" class="hidden text-[11px] font-bold text-slate-500">주유 안함 선택: 주유 내역 없이 바로 운행이 종료됩니다.</p>
@@ -582,7 +655,9 @@
                 class="w-full px-3.5 py-2.5 text-sm font-bold rounded-xl border border-slate-300 bg-slate-50 focus:bg-white focus:outline-none focus:border-aptiv-navy" />
             </div>
             <div>
-              <label class="block text-xs font-extrabold text-slate-700 mb-1.5">부서 <span class="text-rose-500">*</span></label>
+              <label class="block text-xs font-extrabold text-slate-700 mb-1.5">부서 <span class="text-rose-500">*</span>
+                <span id="dep-dept-auto-badge" class="hidden ml-1 px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-extrabold">배차에서 자동 입력됨</span>
+              </label>
               <input type="text" id="dep-dept" required placeholder="예: 생산기술팀"
                 class="w-full px-3.5 py-2.5 text-sm font-semibold rounded-xl border border-slate-300 focus:outline-none focus:border-aptiv-navy" />
             </div>
@@ -689,8 +764,19 @@
             <div>
               <label class="block text-xs font-extrabold text-slate-700 mb-1">비고</label>
               <input type="text" id="fuel-note" placeholder="예: 법인카드 결제"
-                class="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-300" />
+                class="w-full px-3 py-2.5 rounded-xl border border-slate-300" />
             </div>
+            <div>
+              <label class="block text-xs font-extrabold text-slate-700 mb-1">주유 영수증 사진 (CONCUR카드 결제분 첨부)</label>
+              <input type="file" accept="image/*" capture="environment" onchange="handleReceiptPick(event, 'fuel-receipt-data', 'fuel-receipt-preview')"
+                class="w-full text-xs font-semibold rounded-xl border border-slate-300 px-2 py-1.5 bg-white" />
+              <input type="hidden" id="fuel-receipt-data" />
+              <div id="fuel-receipt-preview" class="hidden mt-1.5 flex items-center gap-1.5">
+                <img onclick="viewReceiptData('fuel-receipt-data')" class="w-12 h-12 object-cover rounded-lg border border-slate-300 cursor-pointer" alt="영수증 미리보기" />
+                <button type="button" onclick="clearReceipt('fuel-receipt-data', 'fuel-receipt-preview')" class="text-[10px] font-bold text-rose-600">삭제</button>
+              </div>
+            </div>
+          </div>
           </div>
 
           <button type="submit"
@@ -732,6 +818,7 @@
                   <th class="py-2 px-2.5 font-extrabold">유종/량</th>
                   <th class="py-2 px-2.5 font-extrabold text-right">금액</th>
                   <th class="py-2 px-2.5 font-extrabold text-right">계기판</th>
+                  <th class="py-2 px-2.5 font-extrabold text-center">영수증</th>
                 </tr>
               </thead>
               <tbody id="qr-fuel-history-tbody" class="divide-y divide-slate-100"></tbody>
@@ -962,6 +1049,11 @@
                 class="px-3 py-2 text-xs sm:text-sm font-bold rounded-xl border border-slate-300" />
               <input type="text" id="adm-mgr-role" required placeholder="담당 구분 (예: 상북공장 배차)"
                 class="px-3 py-2 text-xs sm:text-sm font-semibold rounded-xl border border-slate-300" />
+              <select id="adm-mgr-site" class="px-3 py-2 text-xs sm:text-sm font-bold rounded-xl border border-slate-300 bg-white"></select>
+              <select id="adm-mgr-level" class="px-3 py-2 text-xs sm:text-sm font-bold rounded-xl border border-slate-300 bg-white">
+                <option value="site">공장 담당자 (단기 배차 승인)</option>
+                <option value="leader">상위 팀장 (장기 배차 승인)</option>
+              </select>
 
               <div class="flex gap-1.5">
                 <button type="submit" id="adm-mgr-submit-btn" class="flex-1 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-extrabold">
@@ -993,6 +1085,35 @@
                 비밀번호 저장
               </button>
             </form>
+
+            <div class="border-t border-slate-100 pt-4 space-y-3">
+              <h3 class="text-base font-extrabold text-slate-900 border-b border-slate-100 pb-2.5">팀장 비밀번호 변경 (장기 배차 승인용)</h3>
+              <form onsubmit="updateLeaderPassword(event)" class="space-y-3">
+                <div>
+                  <label class="block text-xs font-extrabold text-slate-700 mb-1">새 팀장 비밀번호 (4자 이상)</label>
+                  <input type="password" id="adm-lead-pw-new" required minlength="4" placeholder="새 팀장 비밀번호"
+                    class="w-full px-3.5 py-2.5 text-sm font-bold rounded-xl border border-slate-300" />
+                </div>
+                <div>
+                  <label class="block text-xs font-extrabold text-slate-700 mb-1">비밀번호 확인</label>
+                  <input type="password" id="adm-lead-pw-confirm" required minlength="4" placeholder="비밀번호 재입력"
+                    class="w-full px-3.5 py-2.5 text-sm font-bold rounded-xl border border-slate-300" />
+                </div>
+                <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-sky-700 hover:bg-sky-800 text-white text-xs sm:text-sm font-extrabold">
+                  팀장 비밀번호 저장
+                </button>
+              </form>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
+              <div class="text-[11px] font-bold text-slate-600 leading-relaxed">
+                로고가 검은색으로 깨져 보이면<br>기본 APTIV 로고로 초기화하세요.
+              </div>
+              <button type="button" onclick="resetLogoToDefaultBtn()"
+                class="shrink-0 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-extrabold">
+                <i class="fa-solid fa-rotate-left mr-1"></i>기본 로고로 초기화
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1029,6 +1150,7 @@
                     <th class="py-2 px-2.5 font-extrabold">주유소/유종</th>
                     <th class="py-2 px-2.5 font-extrabold text-right">량/금액</th>
                     <th class="py-2 px-2.5 font-extrabold text-right">계기판</th>
+                    <th class="py-2 px-2.5 font-extrabold text-center">영수증</th>
                     <th class="py-2 px-2.5 font-extrabold text-center">삭제</th>
                   </tr>
                 </thead>
@@ -1186,9 +1308,9 @@
   </div>
 
   <div id="pw-modal" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-        <h3 class="text-base font-extrabold text-slate-900">관리자 모드 비밀번호</h3>
+        <h3 id="pw-modal-title" class="text-base font-extrabold text-slate-900">관리자 모드 비밀번호</h3>
         <button type="button" onclick="closeModal('pw-modal')" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center">
           <i class="fa-solid fa-xmark"></i>
         </button>
@@ -1284,6 +1406,41 @@
     </div>
   </div>
 
+  <!-- ADMIN PENDING NOTIFY POPUP (관리자·팀장 로그인 시 승인 대기 알림) -->
+  <div id="admin-notify-modal" class="hidden fixed inset-0 z-[60] bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border-2 border-amber-400 space-y-4 max-h-[88vh] overflow-y-auto">
+      <div class="flex items-center gap-2.5">
+        <span class="w-10 h-10 rounded-2xl bg-amber-400 text-amber-950 flex items-center justify-center text-lg shadow animate-pulse">
+          <i class="fa-solid fa-bell"></i>
+        </span>
+        <div>
+          <h3 class="text-base font-extrabold text-slate-900">승인 대기 배차 신청이 있습니다</h3>
+          <p class="text-[11px] text-slate-500">단기 배차는 각 공장 담당자가, 장기 배차(24시간 초과)는 상위 팀장이 승인해 주세요.</p>
+        </div>
+      </div>
+      <div id="admin-notify-list" class="space-y-2.5"></div>
+      <div class="flex gap-2">
+        <button type="button" onclick="closeNotifyAndGo()"
+          class="flex-1 py-2.5 rounded-xl bg-aptiv-navy hover:bg-slate-800 text-white text-xs font-extrabold">
+          <i class="fa-solid fa-arrow-right mr-1"></i>승인 화면으로 이동
+        </button>
+        <button type="button" onclick="closeModal('admin-notify-modal')"
+          class="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-extrabold">
+          나중에 확인
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECEIPT VIEWER MODAL (주유 영수증 크게 보기) -->
+  <div id="receipt-viewer-modal" class="hidden fixed inset-0 z-[60] bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-center p-4 gap-3">
+    <img id="receipt-viewer-img" class="max-h-[78vh] max-w-full rounded-2xl shadow-2xl bg-white" alt="주유 영수증" />
+    <button type="button" onclick="closeModal('receipt-viewer-modal')"
+      class="px-5 py-2 rounded-xl bg-white text-slate-800 text-xs font-extrabold shadow">
+      닫기
+    </button>
+  </div>
+
   <!-- Toast Container -->
   <div id="toast-box" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-[calc(100%-2.5rem)] pointer-events-none"></div>
 
@@ -1351,10 +1508,10 @@
     ];
 
     const DEFAULT_MANAGERS = [
-      { id: 'mgr_1', name: '김용문 수석', role: '상북공장 총무·배차' },
-      { id: 'mgr_2', name: '조균환', role: '법인차량 배차 담당' },
-      { id: 'mgr_3', name: '조아름', role: '일정·반납 관리' },
-      { id: 'mgr_4', name: '오장훈', role: '공장 지원·정비' }
+      { id: 'mgr_1', name: '김용문 수석', role: '상북공장 총무·배차', siteId: 'sangbuk', level: 'site' },
+      { id: 'mgr_2', name: '조균환', role: '법인차량 배차 담당', siteId: 'sangbuk', level: 'site' },
+      { id: 'mgr_3', name: '조아름', role: '일정·반납 관리', siteId: 'sangbuk', level: 'site' },
+      { id: 'mgr_4', name: '오장훈', role: '상위 팀장·정비 총괄', siteId: '', level: 'leader' }
     ];
 
     function generatePreloadedDispatches2026() {
@@ -1370,10 +1527,13 @@
           passengers: '임창훈 수석 외 1명',
           pickup: '2026-11-23T08:30',
           returnAt: '2026-11-24T18:00',
+          dept: '생산기술팀',
           purpose: '아산&충주공장 출장',
+          destination: '아산공장 · 충주공장',
           manager: '김용문 수석',
           status: 'approved',
           returned: 'N',
+          dispType: '장기',
           remark: '2026-11-23~2026-11-24 출장 배차'
         },
         {
@@ -1387,10 +1547,13 @@
           passengers: 'Lee Dong hee',
           pickup: '2026-11-23T09:00',
           returnAt: '2026-11-23T17:30',
+          dept: '품질보증팀',
           purpose: '상북·두서공장 업무 이동',
+          destination: '두서공장',
           manager: '조균환',
           status: 'approved',
           returned: 'N',
+          dispType: '단기',
           remark: '2026-11-23 배차'
         },
         {
@@ -1404,10 +1567,13 @@
           passengers: '송준호 수석 외 2명',
           pickup: '2026-11-24T08:00',
           returnAt: '2026-11-26T18:00',
+          dept: '생산관리팀',
           purpose: '충주공장 출장',
+          destination: '충주공장',
           manager: '조아름',
           status: 'approved',
           returned: 'N',
+          dispType: '장기',
           remark: '2026-11-24~2026-11-26 출장 배차'
         },
         {
@@ -1421,10 +1587,13 @@
           passengers: '송재진 수석',
           pickup: '2026-11-24T08:30',
           returnAt: '2026-11-24T19:00',
+          dept: '구매팀',
           purpose: '충주공장 출장',
+          destination: '충주공장',
           manager: '김용문 수석',
           status: 'pending',
           returned: 'N',
+          dispType: '단기',
           remark: '2026-11-24 배차 신청'
         }
       ];
@@ -1462,10 +1631,13 @@
           passengers: i % 3 === 0 ? `${drv} 외 1명` : drv,
           pickup: `${dateStr}T09:00`,
           returnAt: `${dateStr}T17:30`,
+          dept: ['생산기술팀', '품질보증팀', '생산관리팀', '구매팀'][i % 4],
           purpose: purposes[i % purposes.length],
+          destination: purposes[i % purposes.length].split(' ')[0],
           manager: mgrs[i % mgrs.length],
           status: 'returned',
           returned: 'Y',
+          dispType: '단기',
           remark: '2026 대장 이력'
         });
       }
@@ -1534,9 +1706,12 @@
     function buildFreshState() {
       return {
         adminPassword: '1234',
+        leaderPassword: '5678',
         isAdmin: false,
+        isLeader: false,
         activeTab: 'dispatch',
         adminSub: 'dispatches',
+        dispatchView: 'calendar',
         selectedSiteId: 'ALL',
         selectedVehicleId: 'car_196_6184',
         sites: JSON.parse(JSON.stringify(DEFAULT_SITES)),
@@ -1569,7 +1744,18 @@
         if (!Array.isArray(merged.managers) || merged.managers.length === 0) {
           merged.managers = JSON.parse(JSON.stringify(DEFAULT_MANAGERS));
         }
+        merged.managers = merged.managers.map(m => ({
+          ...m,
+          siteId: m.siteId || '',
+          level: m.level === 'leader' ? 'leader' : 'site'
+        }));
         if (!Array.isArray(merged.dispatches)) merged.dispatches = generatePreloadedDispatches2026();
+        merged.dispatches = merged.dispatches.map(d => ({
+          ...d,
+          dept: d.dept || '',
+          destination: d.destination || '',
+          dispType: d.dispType || computeDispatchType(d.pickup, d.returnAt)
+        }));
         if (!Array.isArray(merged.trips)) merged.trips = JSON.parse(JSON.stringify(DEFAULT_TRIPS));
         if (!Array.isArray(merged.fuels)) merged.fuels = JSON.parse(JSON.stringify(DEFAULT_FUELS));
         return merged;
@@ -1846,6 +2032,328 @@
     window.addEventListener('online', () => { if (cloudCfg.url && cloudCfg.key && !cloudOn) autoReconnect(); });
 
     // =====================================================================
+    // v4 ADD-ONS: 단기/장기 승인 · 팀장 모드 · 캘린더 뷰 · 영수증 · 로고 변경 · 승인 알림 팝업
+    // =====================================================================
+    const LOGO_KEY = 'kum_aptiv_logo_img_v2';   // v1에 저장된 옛 로고는 자동 무시
+    const DEFAULT_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAeAAAABwCAIAAABJpzQ1AAAfrElEQVR42u2daXhc1Znn33PuVlWqRVJJyLYsGckbtmzLli3L2jwxhgYcMCHDYqBDQtKEdBK6nyYdEmCSTALT9HQ/BCbEmXQ/DJn0kNBJOj2Enk4yYLR4JGxr9Q6xJYNlyciLSguSarn3nDMfjiTAcd0qLaWl6v194INRLbfuuf/znv953/cQIQQgCIIg8w+KPwGCIAgKNIIgCIICjSAIggKNIAiCoEAjCIKgQCMIgiAo0AiCIAgKNIIgCAo0giAIggKNIAiCAo0gCIKgQCMIgiAo0AiCICjQCIIgCAo0giAICjSCIAiCAo0gCIICjSAIgqBAIwiCICjQCIIgKNAIgiAICjSCIAgKNIIgCIICjSAIgqBAIwiCoEAjCIIgU0TFn+AKhBBCCEIICDHpFxMiX0sImcNL4JwTIABium9EiJA/ghACYOLS5uQCx+7LjFzXlL8DwCxce1wjcLZG2ix/mfiePiJg7p+y2WH8CUSQycAYAwBKaSo8JKkcrOD9xQh6fg3H7u7uv/6rRwFgsjG0/HtC4NnnnluSmzv7g5tzTiltb2v/3n/+jtPp4pxP/z0VRSGEeDyejMyMnJycgoKCFStXFhQWOp3OCaWeHZn++qNf6+zsdDgcM3JdU1pOEM65YejPv/BCZmZmIu4vZ4wqyu/+/bc/2rvX6/Uwxm3uy+Dg4J8+8MCee/cwxhRFScSzEAwG//KrjwwMDKiqahPJKYoyNDR02+7dX/zSw3IQTvkTz3Wd+/qjjwKxWynJB00I8exz31+alyc4JzRprVoU6I9Fhaqq1tXWvvab32RmZsogcbJyFggEdt9++7333y/fbZYnGAAIBAJv7nvT4/HMiJDJ9xRCcM6FEJTStLS0Jbm5JSUlN9500/U7r3e73fKnm3GNuILm5uYj7e2utLQ5FGjGmNPpDIfDCb2D3d3d+954w+/324xAVVUvXbpUWVU18apEzEYul2tgoP/3v/u9z+ez+TKU0uHhYTMSeejhL0550uKMK6py6NDBf3vttQzbp49SGgwGV61alX3NNWOCjRF0KiBn/rraOp/P5xmLXyY19ImiKIyxutq6e++/n87RrK6qqs/nS0tL42LaQibgo88bIUQIwRjr7urqOHXql7/4ReHy5ffcc8+DX/i8Lz2dc55QWzAtLc3r8zmdzhm4rqlpFhDGudPhSPRyQdd1n8/n8XgYjy7QihqJRAzDSPSC7JZdu/bX1Xu9XsuygET9ZVwuV1dX1/nz53OnvHYkAADNTU1uj8fr9VqMRXn6iKoolmXdcOONhmHMQmSAAj1f/A1K6UB/f1tLi8PhsExrCoGJ4NwwjJbm5sHBQZ/PNycWntRQznniIk3dMBxOJwCc7+l5+ntPvfLKz5948snb77jjwx2exOhFoq8rdlDJ2Cx8+od3MLrFwQlnjCV0A0lGGGXbtjldLtM07T9LUZS+vr4jhw/n5uZyzqcgmjK4aW9r1zTNsiyb31nOWhWVlSkRNaI0Tzz/ANDc1Hz+/Hld16c29IUQhmH09PS0NDdPvGdSTmaMMcaYrutZ2Vm97/c+9PkvPPnNxwXnCVpxI3MgDYQAwKrVqwuXLw+FQvYrQkII47zp4CE5Pqb29HWdPfvumTOGYdg8OIQQ0zSzs7M3l26ZmEVQoFOF2pqaKVjPV4wgxljtmzUpsuywLMswjIzMzB/t3fvwQ1+UYR1qdDJACGNM07SysrJQKGS/MOKcG7re2toqhKCTD5/l1N7W1jY4OGi/cyO3LovWrcvJyUmFJBMU6A9XWJFI5K23GqeZJ8A5dzgcb73VaJpmcrtjV5gPixYt+pdf/eqbjz1GKU3WpUNqUrW9OmagKoRwOBwdp0+fP39ebjBOdjIAgKZDh2JO7ZRS0zTl7uh0YykU6IXlb5w4fryzo9PhcEwnABScOxyOjtMdJ0+cSGKX448xTTMnJ+cnL/6Pn7/8M+kn4rha8OpAKQCUlpZmZ2ebpmkTrgohVFUNBAJHDh+GydtcEwa0YRj2r+WcO53OiqpKGU2jQKeQQNfV1gWDwemHvYqijI6O1tfVpZRAy4jG6/P9zdNP9/b2UkoFxtEL3uQgQohrcnLWrV8fDAZj29CMNR2atA09KQM6FArlL1tWVFQEKWBAo0B/KKkAsL++Xtf16Usq51zX9fq6+ol3ThHkHmlvb+8//vcfE0I4OtFJMekCQEVlpX0ELYe9YRhtLZO2oWXIfOTwkZgGNKU0FApt3rLZ6XQyxjCCTpXwmRBy9r33Thw/7nQ6p7/BJYRwOp3Hjx0719U1FT9uFuMjJRaqqiqKEn+owhjzeDz/+utfBwIBRVFmcLdQfpn4mQ/vnAwCQSgAVFVXSU2MOT2fPn36/SnZ0PEY0EBACFFdvX2yQfrCBfOgxxLyGxsa+gMBf1aWZVk2E/iEVNn8mRBC1dRAX6CxsXFPfv6Ui18Trc7hcDgYDMacbCilhmHI2u6YT50QQtf1np6emjffvPOuu6aWEntVBvoHLl26lBZ3JaHX641nhhBC9AcC8QT7E5WEKWVbEUoAYG1R0bJrr+06e9bGIxZCaJoWCATa29tlq4P4J0jOeXtbW0wD2jKtzMzMsm1lKeJvoEDDxJ2uramlts+zzO+RikYAvD6f3QpLACW0rqZ2z733zsORRCkdGRmprKq68+67LMu66jckQBhnly5cfO+9944cPvzOO++oqhpnigshpL627s677prB7/zZBz/7Jzf9iaZrMZ58AUCAc/HrX/0qZhMJqSkP//mfO11O+ULb6I1wwTVN83g8KSTQhDDGHA7Hli1bTv3hD/ZxNCGEM37owMFP3nrrpMKjc11dnWc67QWaUjoyMrx5S2lefr4QgqBApwJjBYQDA62trTbBEaV0dGSkvLLyll27AEQ4HPnRD384MjISLUbjnDtdzpbm5qHBQe8clRTGDJ9XX3fd3ffcE8/fRyKR2pqap7/7vXfffdflitGGSS51Txw/blmW1McZufaHHn54Un9fW1Nz6dIlTYsq6FJ6dMP41ne+rU++Zjp12rzJH7Bqe/XPXn4ZYtnQuqG3yWzo+ARUvnl7e/tA/0BGRoZ9C45wOFJeUU4IYZalpIbXpM7JDZcBSYyIZbb8DUVRWpqbz/f02HSEIYSEI5HPPPCZ3Z/6lPyXhv+3v+bNGo/XK672krGVfnd3S0vL9Tt3zuBKf2Y1WhYE2nw3Ka+6rt90883FGzd+6rbb3j//vv1WuwxLe3t7L128uHjJkpn6wnFWNssvLGuF49FQIUQgEMjKzo5/Ikk5G3q85tvvzzRNk1Jq43I4HI6Ojo6e7u6leXlxmXsCYMKAjqn+ul5VXS2H7xxIFsxBY6ZZXCZwBlLLCAFC5EIUGJsPZr8sIIz2fMoH3u/3byopYZYVDAYZY+UVlaZp0ug3jFJqMVZbM39LCuPfJJRB9KJFi772118Pjo7aC5kQQlGU4eHhCxcuwMxVfuMm4RwKtBAiLy/vujVrg8FgzGzo/kD/4bizoalCxwxo3RC2CXaRSGTJkiXFGzfCrBnQggNjwPmYZMk+p/Jfkkqg5fVQBRQFAERwRIwMAbOAUlAUIAT4nBU1jBUQNtoVEEr3ec3atXn5+VRRdF1XFKWistLejxsrKWxIkpJC6RVUVlf5s7JiZlwRQizTGhoaAmzNkRSMJ9tVRCKRGOJICBfjTTniWL/KHtBnOs8YDrtlGaU0FAxu3LTJ6/XGuTaabsjMGRAKigKUgmmK4SERGgVCxv5FCJiVroqJDwc4A6oAgNVUazb8nnWeEIGLwBhxe+mSZWrJdu0Tt5LMa0CA7G45y/4GpfTkiROygDCqQFMaiUTKKyrgI42P1xattd/XlgLd0dHx9smTG4qL52cux2Qj7szMzKysrLNnz9pvvgGAAGGZFkpbciAFsaqq+r8Zz8fYgeBc18ds6JhxyYQB3d/fb29AE0IsxqS/kfBHSZotROG958y6f2OH3+K958ToB6AZ1H+NsnqjVr1L2VAGQCbEbcEKNGdAFXayNfTjp6yjB4FZoOlEUYEQ0XeBdZ406/5P+OXn9bu/ZOz5ssxynE2Nlne6vq5udHTU5XJFy5yTTUSrq6th/Eg6ua+9efNm+31tRVFGRkbq6+qTQ6Dl5dtYkEgSuxwAsKF4Q25u7sWLF222XqdgQzcdOiiEsN+QsizL6/VuqyhPuL/BOVAKkXDop89GXvup6L8MqkZUTUbN1vn3rLbG8K9f1Mqud3zp23TZykRrdEIvlQFVIr99Zfgv77COHiRuL/FlEmcaaDqoGhhO4vaRdL8YGQr94InRJz8rRoeBzGr+eTwFhHIzbenSpeuLN1wxOKqqq2L2DdA1TdZ8J4HLIYQYHBwMBAJarPBZ/m6Gw0BpS5oImnPu9ng2bS6xr/kes6H747KhxzOg2w3DENwuwS4UCi1fsWLlypWJFWghgFLRd3Hkr+4M/+TvwTRJehZJ84JugKqBphOXm6T7idNlNv7f4a/cah3YB1RJqEObsEvlHKhi7vvX4DOPEEUlbi8wNuavCzHm4HAGzAJFJf5FZu1ro999GCxr7P/OSvhMCOk6e/b4seNOp5NHGR9ycGwqKXG73RPml/zv1rKyjIwMm4oVzrnT5Tp+7Fj3uXPzuaQwHizLIoQcOXz40sWLWqx+2bL5ZHp6OqRSOlpyI0dvdXV1PBYw57FtaPmG57rOnenoiNmCIxwOl5WVJbYJlzzocHhw5PE/tY4eIP4coBSYBZyNS5YAzoFZwDnxZkAkNPqtz1ltDUCVxG0b0gTdTCCEd3UEn32MuDygKGDzswoBlkmyFln7/z30T98fM+Bna8A1NjQEAgFN02yOqOSMV2/fDuNda2F8Xzt/2bLV162272WualpfX19jYyPMv8ZJ8qRBe9g48pyLHzz3vBIrfJYWkMfrzcnJQYFOMpdjW0WFz+ez312QOaZtbW322dByFB09ckTWE8X89Krt1Yl+HoDS0N7vsOPNJCMbLNNOiJgFugFAgn/7F6L/0qRPmJ77CJqQ0Et/J4YHQdfjml5Mk6T7I7/8B36uEyidhUSWDwsIbU1VyzR96T5pfn20eEmm5ZVtKw+Hw3ZrLiEopbU1tTDPilPlUpRSqmkajc5Evt1777774GceaGlpkSsJe4E2TTN36VJ/VhYKdDIJtBCisKBg5cqVoXDIXnllb+ie7u6YPbOaDh3i3G7niRBiRiI5OTmbtyTyCBXOgFJ29FDk978gGdlgRmK/hDFwpvGe98Kv7AVCEpTUkYBNQs6BUt7VYR18g7i9YMW5lS9AUcXA5chvf+54+FuJDqLl3D44ONDa0hKzgHDDxuKCgoIrwoGxfe3qqr0vvGAzBGX72pampqGhIa/XO09KCie69576wynGmKLQP7oZQABCofDQ0OCZM2eaDh6qrakJBAIerzfmGlMuSIs3FstQOqX6+SU38qD6bRXlzc3NaW53tCjqQxu6vX1pXp7gHK42BqTit7W16YYubBPshkOhbRUV2dnZid5pD//mfwJjk6ifYxZxe803/7dx/18QX2YichwSINCCA1CrqVYMD5H0LGBx51pxTgyn1VwPf/YEJPiplqV9zU3NPfYFhJSGw+Ft5RWUUlm4fEUAvnHTpsWLF0uT5Kph+HhJYU9Lc/P8KSnknLvd7n2vv77v9dejVkIDMS3TMs2IaVJC0txubxzqLFEovX7nTlS0JGM8KNn+470/itHsmxDO+YEDB2/dvTvaCKSUnjt3rrOjw/6IDLkgq6yqhMQl2AkBVBHDQ+xYE3G4JrF8FwI0nV963zpyQNv+SYgyFc0zi4MQAGCdJ4DQqMZutCBa0/nFHt53YVzoE0vsEwiFUDVtIsHuinHDOU9PT99QXGxvQxNCLGbV1dTO26fuqgABXdfT3O7MzMz0jIw492dkS/XC5curqqogZVqOpY7LAQAlm0sWLV4c44AVznVdb29riyapUpEPt7cHAgH7nHrGmMvlqkzocBICAHjPu6L/EqjqJJfvBDhjp4+Nrzxn+jdPkEDzvgugKJPUZwGUQnBEDPYl5mI/4qYoimmabzW+ZTN7y+rSnEWLijdtFEIQAPFxGGOc8/KKCpnhYG/JNTY2LLiSQrmLKDcJ48x9VlR1eHh4z333udLSUqSlekpF0JzzjIyMDRuLYybbORyOzo6O7nPdNvlLMVtwSLts2bXXrlm7FhK4nyEAQAxcFmYECJ30awkVA31jYr0ABHreM34C4Qm5vLIzoEdHt2zZkpmZSQihinJFjCm31z6xY4fH44lZ891xuuPtk29DUh+CRSkdHR1ZsXLFZx/8XPz9zJAF9+xUVVXHDEombGi4Wja0oihc8LbWNl2PYUCHQqHS0lLDMFJzvk+EBy2AAPXnTM5ul6E35+BMIz5/Ymaj8UEmOAW6vz5GAaEcWGvWrr1w4YJlmldpbygEEOJKcy1duvSsbS9zWVK4f3/9huINyVFSGC3eCY4Gv/vUU9LWx+3BZHU5Kior3G63veUlzzNsOnRo96du/2OVp5T2dPfEY0CDELLCO5H1qwQASHoW0fTJO6sEBCfp/gRZHIkRaABleREIPkmVJWBG6NJC6s8BgMmvNeJlvIBwv/0JhIwxr9f70osv/uSll6TFEW0QmZGITfGrHJGapu2vq/vqI48kq2ypmnaht/exb3zj5ltuQXVOboFetXp14fLlp0+dspFX2R207Wo29IQB3d8fSE/PsOnxa5pmpt+/tWwrACg0gTnBAEBzC0hGthjom6QNLYAqysr1C8fiIBQA1K07iNs7iRQOAKBUhINq6X+IUdgy7TWabKB17OjReI4vCgaDoyMjwdHoDA/bL/fkh7qcrmNHj41lhiaXyyEzpi/09v7ZQw89/p+eRHVObmTV0tayrfZ749LZ6+zo6I4y5mUGNLE1oGUXyaV5eYk9QoUQ4Iy4vcr6rSI0CvF/ECFgRmj2YrW4XD4JC0GgKQXOaf4KdduNYngI4u2fS4BZxO3Td903Maclxt8QMF5AqGpaPOoTs2VyPNaYqqmXL1+WJYU2bQcWnKehqmowGBwaGvrmE4///fefTWIDB/ko1dXbY97oaDb0WAZ0a5v9Ena8i2Q5jPc7TTTG7Z+bXGqDoorhIW3nHcSXCZwlQrUS2HbE8fnHiNsHkUhcE4umiYE+/e6Had7ysYZSCQr3CAGA2toaGndNuYhF/B8tk+3kQZwLWpfl3BQOhy9fvlxQUPDyKz//xuOPy9UJZm6kgsuxZWtpdnZ2zM7g0oa+IkIihHR3d8c0oGUXyaqrJbkm4KoU4FzZUKbffI/ovwSaHoc6KxAcobnXGvd+BYRIkCVLE3QPQQiav8L5tb8Tox8AY3b524SAqonLver2TzoeeHTs/IJEzRqygHCwpblllo9nliWFzU1NH3zwwTzp2BnPiSpXPV0lHA739/cPDAzkL1v21H95+ndvvH7DjTcyxiilqM5Jj9z9y8nJKVq3LhgMEttkO13X21o/ZkPLnI1jR4729/fbZEDLJNfc3NwNG67sIplIo4M7vvJdZV2p6L8EqmYnRIoKkTCAcH7zByQjO3F9khPWD5pS4Ey74dPOSDj43DcgNErcXnnTxuPW8VNkzIgYuKztuN355F5QVRCJ9Dc4VxSltbm5p7vbpoAwQXODbhjd3d2tzS2fuH7HnJcUyh2YUChEYvV5EeMJ0XJ6S0tLy8/PL9my+aabb9lx/Q6XywUAHH3nVELWfFdWVb25bx8lhEcf89KG7unuzsvPH5NpIWDMgLYLxSilwWBwU0mJ2+OZJd9MNqp0+9KeeXn021+w2huINwNU7WOHpxAChILgYqifeDNcT+5VS6oS2hI6kQ37qQKc6bvuVa5d9ccN+4ExYZnAGL1mifHg1409Xx6T78SHYLU1tYyx2T//kVBqWVZtbc0nrt8x50GQaZqLFi9euXIFY/bdIwUAcTqdWdlZ1+TkFBYUrlq9qnD5cofDMfGsyqZKKFup5nJUVsU49W0iG7q9rT0vP18Gy1RRhBCtra32GdByX7Gqugpm4QiVjwfRxH9N2nP/ctWG/cIywTRBN7TKm2anYX+CT1ShCnCmrN2c9oNX5/7Iq/ECwsbGRofDIWY9lUJw7nA4Ghsar2jrMScP2PDw8PU7d/7N3z4z5RgKxndQUbBS0OUAgKJ165YtW9bV1WVTASD9kAMH3pLZ0OMZ0N0dp0/bG9DjR6hUwCw3DJAxvm44HnpCv+0zVxx5pXzsyCtY+EdejWk0B0rVrTvUrTsAQARHgDPicIEy/ulj15nYkJZzThV68uTJzo7TNgWEEwNrCnaq/Z6hTDw6ferUO2+/vW79+rlNeJBHlctK7nhEVl7aRBUl6nKKC/TYqW+lW06dOmUTR3PODcNob2uXnp5lWZTSI4ePBAKB9PT0aK+SRbzr1q8rLCyE2e/oIk0/wemiPGPPl2HPl8E0RTgIqkocronnQWZAJ/q7zEocJ39fzkAAKApxpk3cvbH+G3Q2nvaxAsK6upGRUafTroBQOgBTcKhl8bfNH0ycUjjnAg0fOWAQE+OQKcQiAFC9ffsrL//M/s8MwzjT2Xn27Nm8vDyZ9dF06BBjdgY0oTQcCpdt2yZbdM1BNEAIEAUEB9mrWtOITMmVh6oQApQmOqCcRYGeCKU/nHwACMDs6oK8zfV19TGyLwlhjOUsynG73ZwLMol7Snov9AZHg/bZ+/KUwq888lWFYhCKLFTkIC8rK8vMzDSjF2pNdB4/eeJEQUGBdPZaW1sN2x7QQghFVWSC3ZyuFCgoH5EsKdyzO1vMhRM6F5lYE/1njx87Zp9gJ9fyL7700tqiIrkDFs/7S1v5vz7zzPPffy7T72dRwnN5SuGxo0d7enpyc3MFFws9JxpJWYEWQizNy7tuzZrmpqa06OfsyGS7//XTf7rQewEARkdHOjs6DMMQ0Y9pNiORRYsWlWzeDPOkY+3cJY+qKTKepEA3NjT09fX5/f5o/oY0v65bc11RUZGsIIx/vMrOdntf+KH99qOqqn2XL7/V0HjXPXdzwRXAOBpZkMhku/LKyoaGBg+l0QSac+5yuRobGva98YbUX6/XSykV0R+lYDBYVV3t9/uxMDVVLl7e5rqaWkqIffescDi8dWsZVRTLskTcyBl2Q3Hx0qVLI+Gw/QYjoaS2pgbwvD5kITNx6pth6xnKINrpdGZlZWVlZcnmvfZva1nWxBEqqb5SSYWLlPtgQ0NDLc3NTpfL/q5TSmX2JZkUlHLOPR7PppJNwVhNZJxO17wqKUSQKQc9xRs35sYRlHDOLcuyLCvm3jtjLC0traKyEvBEnhQRaKnIrc0tPT09um3Opmma2dnZm0tLpzA4pLNRVb2d21bBSEuuu7u7taUFYwRkQUfQ8nDLTZtLgsHQjIgpoTQcChUUFFy3Zg0uMSGlTlSpra2xTJPatjcMhUJri4pycnKmcPy2bEpQXlHu8/mY7VnmhFLLNOftKYUIMsmgpJoLPiNZZ5TSYCi0pbRU13U8Mi1VBHrsBMKGRsO2PoVSGolEKiorYErtDaVfUVhYuHLVKvtWuWMlhY2NlmVhxQeygINoGZSUl3t9XvugJG7JF4SQ6u3bIbFHqKBAzzN/45233z59+rR9gp2s9JPm19Smbs44VZRtFeXhUJjY9zJ3Ok+fOvWHd95BlwNZwPJBKQAULl++auWq0LRdDukx+v3+0q2lMF64gAKdEgJdX1c/MjJic8tl/kZeXt669ethyrsTBACgunq7oir2LeIURRkeHq6vq0eBRhY0zGKU0m3l5aFwePoCHQqFioqKluTmTsFjRIFeqP4GANTX1emaZu9vyPaGLpeLT9X8kgN00+aSxYsXRyIRmzeRpxTW19VhpIAscJsDAKBqe7WqqtMMNaTHWD5VjxEFeuEh+NjxDceOHnW6XPaulpj2+cFyXzsjI6N448Zg0K7mW2aGHj1y9HzPeWKbmo0g89/l2FRSsnjxYtM2KIlnsWsYRmXVWJIr/rbJL9BySj944MDAwIBhGDYHDAoh0tPTy7Ztg/Gtj+l8YmV1FedcUdVoH0cpdTgc/f2BQwcPzqzLEf85KcmdZBr7MMlx5l1IGvcdnA8qJoOSzMzMDcXFkYipapoyJVRVtSwrPz9//awdobIQSPZSbwIA8Nqrr37wwQeyM1a0h3lkZGRLaWlBYcE0u7vJ11ZUVhJCAn19BKIeQakoytDQ0G9effWO//jpGbxiy7IGBwYZYzairyjKwMBAMBhM4js/PDw8ODgYiUR49J4PlmXxyZwqOTtEIpGBgQGb4QoAqqoODAyEw+F5EgZRSisqK3/5z/9MKLGmlM6hKEp/f/8NN96QlpaGB8OnhEALIRRFCYVCXq9v9+27VVWL9ihKrfzkbbdSSuXJp9MJKABg9erV9953X2/v+5quRzvDW+5ZezyeSDgsy2emGRDJl/uz/DfdcrN9voqi0KGhD9YWrU3WtSQhpLKq8tprrzUMw0agGWNOl0s3jPnztQEgPz//ll27vF4PY3ZT7ODg4PIVK+bDHZRByc4bdt5+xx2apk1twlMUZWho8NN33omi/LEhge7n3E8ks9NZFkEQjKDnZygd5zw0g85XnLby1I5umZGLnfGPnlfEb+vPN7tzgd5BMRNmUXKPSYygEQRBkgfcKkUQBEGBRhAEQVCgEQRBUKARBEEQFGgEQRAUaARBEAQFGkEQBEGBRhAEQYFGEARBUKARBEFQoBEEQRAUaARBEAQFGkEQBAUaQRAEQYFGEARBgUYQBEFQoBEEQVCgEQRBEBRoBEEQBAUaQRAEBRpBEARBgUYQBEGBRhAEQVCgEQRBEBRoBEEQFGgEQRBkqvx/Gs0M/qwl9G4AAAAASUVORK5CYII=';
+
+    function computeDispatchType(pickup, returnAt) {
+      const p = parseDateMs(pickup), r = parseDateMs(returnAt);
+      if (!Number.isFinite(p) || !Number.isFinite(r)) return '단기';
+      return (r - p) <= 24 * 60 * 60 * 1000 ? '단기' : '장기';
+    }
+
+    window.updateDispTypePreview = function() {
+      const el = byId('disp-type-preview');
+      if (!el) return;
+      const t = computeDispatchType(byId('disp-pickup')?.value, byId('disp-return')?.value);
+      el.innerHTML = t === '단기'
+        ? '<span class="text-sky-700">단기 (24시간 이내)</span> · 공장 담당자 승인'
+        : '<span class="text-rose-700">장기 (24시간 초과)</span> · 상위 팀장 승인';
+    };
+
+    // --- 로고 이미지 변경 (좌측 상단 로고 클릭) ---
+    window.openLogoUpload = function() {
+      byId('logo-file-input')?.click();
+    };
+    window.resetLogoToDefault = function(e) {
+      if (e) e.preventDefault();
+      try { localStorage.removeItem(LOGO_KEY); } catch (err) {}
+      applyLogoImage(DEFAULT_LOGO);
+      showToast('기본 APTIV 로고로 초기화되었습니다.', 'success');
+      return false;
+    };
+    window.resetLogoToDefaultBtn = function() {
+      try { localStorage.removeItem(LOGO_KEY); } catch (err) {}
+      applyLogoImage(DEFAULT_LOGO);
+      showToast('기본 APTIV 로고로 초기화되었습니다. (상단 헤더 즉시 적용)', 'success');
+    };
+    window.handleLogoFileChange = function(e) {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      compressImageFile(file, (dataUrl) => {
+        try {
+          localStorage.setItem(LOGO_KEY, dataUrl);
+        } catch (err) {
+          showToast('로고 저장 실패: 이미지가 너무 큽니다. 더 작은 이미지를 사용해 주세요.', 'error');
+          return;
+        }
+        applyLogoImage(dataUrl);
+        showToast('로고 이미지가 변경되었습니다. (로고를 다시 클릭하면 언제든 변경 가능)', 'success');
+      });
+      e.target.value = '';
+    };
+    function applyLogoImage(dataUrl) {
+      const img = byId('header-logo-img'), txt = byId('header-logo-text');
+      if (!img || !txt) return;
+      img.src = dataUrl;
+      img.classList.remove('hidden');
+      txt.classList.add('hidden');
+    }
+    (function bootLogo() {
+      try {
+        const saved = localStorage.getItem(LOGO_KEY);
+        applyLogoImage(saved || DEFAULT_LOGO);
+      } catch (e) {
+        try { applyLogoImage(DEFAULT_LOGO); } catch (e2) {}
+      }
+    })();
+
+    // --- 이미지 압축 & 주유 영수증 첨부/보기 ---
+    function compressImageFile(file, cb) {
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        const img = new Image();
+        img.onload = function() {
+          try {
+            const max = 900;
+            let w = img.width, h = img.height;
+            if (Math.max(w, h) > max) {
+              const ratio = max / Math.max(w, h);
+              w = Math.round(w * ratio);
+              h = Math.round(h * ratio);
+            }
+            const cv = document.createElement('canvas');
+            cv.width = w;
+            cv.height = h;
+            cv.getContext('2d').drawImage(img, 0, 0, w, h);
+            cb(cv.toDataURL('image/jpeg', 0.6));
+          } catch (err) {
+            cb(ev.target.result);
+          }
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+    window.handleReceiptPick = function(evt, dataId, previewId) {
+      const file = evt.target.files && evt.target.files[0];
+      const dataEl = byId(dataId), prevEl = byId(previewId);
+      if (!file || !dataEl || !prevEl) return;
+      compressImageFile(file, (dataUrl) => {
+        dataEl.value = dataUrl;
+        const img = prevEl.querySelector('img');
+        if (img) img.src = dataUrl;
+        prevEl.classList.remove('hidden');
+        showToast('주유 영수증 이미지가 첨부되었습니다.', 'success');
+      });
+    };
+    window.clearReceipt = function(dataId, previewId) {
+      const dataEl = byId(dataId), prevEl = byId(previewId);
+      if (dataEl) dataEl.value = '';
+      if (prevEl) prevEl.classList.add('hidden');
+    };
+    window.viewReceiptData = function(dataId) {
+      const v = byId(dataId)?.value;
+      if (v) openReceiptViewer(v);
+    };
+    window.viewFuelReceipt = function(fuelId) {
+      const f = state.fuels.find(x => x.id === fuelId);
+      if (f && f.receipt) openReceiptViewer(f.receipt);
+      else showToast('첨부된 영수증이 없습니다.', 'info');
+    };
+    window.openReceiptViewer = function(dataUrl) {
+      const img = byId('receipt-viewer-img');
+      if (img) img.src = dataUrl;
+      byId('receipt-viewer-modal')?.classList.remove('hidden');
+    };
+
+    // --- 비밀번호 모드 (관리자 / 팀장) ---
+    let pwMode = 'admin';
+    window.openPasswordModal = function(mode) {
+      pwMode = mode === 'leader' ? 'leader' : 'admin';
+      const t = byId('pw-modal-title');
+      if (t) t.textContent = pwMode === 'leader' ? '팀장 모드 비밀번호 (장기 배차 승인)' : '관리자 모드 비밀번호';
+      const inp = byId('pw-modal-input');
+      const modal = byId('pw-modal');
+      if (inp) inp.value = '';
+      if (modal) modal.classList.remove('hidden');
+      setTimeout(() => { try { inp && inp.focus(); } catch (e) {} }, 40);
+    };
+    window.submitPasswordCheck = function(e) {
+      if (e) e.preventDefault();
+      const inp = byId('pw-modal-input');
+      const entered = inp ? inp.value.trim() : '';
+      if (pwMode === 'leader') {
+        if (entered === (state.leaderPassword || '5678')) {
+          state.isLeader = true;
+          saveState();
+          closeModal('pw-modal');
+          showToast('팀장 모드로 접속되었습니다. 장기 배차를 승인할 수 있습니다.', 'success');
+          renderAll();
+          maybeShowPendingNotify();
+        } else {
+          showToast('팀장 비밀번호가 일치하지 않습니다. (기본: 5678)', 'error');
+        }
+        return;
+      }
+      if (entered === state.adminPassword) {
+        state.isAdmin = true;
+        state.activeTab = 'admin';
+        saveState();
+        closeModal('pw-modal');
+        showToast('관리자 모드로 접속되었습니다.', 'success');
+        renderAll();
+        maybeShowPendingNotify();
+      } else {
+        showToast('비밀번호가 일치하지 않습니다. (기본: 1234)', 'error');
+      }
+    };
+    window.handleHeaderLeaderClick = function() {
+      if (state.isLeader) logoutLeader();
+      else openPasswordModal('leader');
+    };
+    window.logoutLeader = function() {
+      state.isLeader = false;
+      if (state.activeTab === 'admin' && !state.isAdmin) state.activeTab = 'dispatch';
+      saveState();
+      showToast('팀장 모드가 잠겼습니다.', 'info');
+      renderAll();
+    };
+    window.updateLeaderPassword = function(e) {
+      if (e) e.preventDefault();
+      if (!state.isAdmin) {
+        showToast('팀장 비밀번호 변경은 관리자 모드에서만 가능합니다.', 'warning');
+        return;
+      }
+      const p1 = (byId('adm-lead-pw-new')?.value || '').trim();
+      const p2 = (byId('adm-lead-pw-confirm')?.value || '').trim();
+      if (p1.length < 4) {
+        showToast('팀장 비밀번호는 4자 이상 입력해 주세요.', 'warning');
+        return;
+      }
+      if (p1 !== p2) {
+        showToast('비밀번호 확인이 일치하지 않습니다.', 'error');
+        return;
+      }
+      state.leaderPassword = p1;
+      saveState();
+      if (byId('adm-lead-pw-new')) byId('adm-lead-pw-new').value = '';
+      if (byId('adm-lead-pw-confirm')) byId('adm-lead-pw-confirm').value = '';
+      showToast('팀장 비밀번호가 변경되었습니다.', 'success');
+    };
+
+    // --- 승인 대기 알림 팝업 (관리자·팀장 로그인 시) ---
+    function maybeShowPendingNotify() {
+      const pendings = state.dispatches.filter(d => d.status === 'pending');
+      if (!pendings.length) return;
+      const list = byId('admin-notify-list');
+      if (!list) return;
+      const bySite = {};
+      pendings.forEach(d => {
+        const key = d.siteName || '기타 사업장';
+        (bySite[key] = bySite[key] || []).push(d);
+      });
+      list.innerHTML = Object.keys(bySite).map(siteName => `
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-3 space-y-1.5">
+          <div class="text-xs font-extrabold text-amber-900">
+            <i class="fa-solid fa-industry mr-1"></i>${siteName} — 승인 대기 ${bySite[siteName].length}건
+          </div>
+          ${bySite[siteName].map(d => {
+            const t = d.dispType || computeDispatchType(d.pickup, d.returnAt);
+            return `<div class="text-[11px] font-bold text-slate-800 flex flex-wrap items-center gap-1.5">
+              <span class="px-1.5 py-0.5 rounded ${t === '장기' ? 'bg-rose-600' : 'bg-sky-600'} text-white text-[10px] font-extrabold">${t}</span>
+              <span>${d.requester} · ${d.vehicleLabel}</span>
+              <span class="text-slate-500">${fmtShortDt(d.pickup)}~${fmtShortDt(d.returnAt)} · ${d.destination || d.purpose || ''}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      `).join('');
+      byId('admin-notify-modal')?.classList.remove('hidden');
+    }
+    window.closeNotifyAndGo = function() {
+      closeModal('admin-notify-modal');
+      state.activeTab = 'admin';
+      state.adminSub = 'dispatches';
+      saveState();
+      renderAll();
+    };
+
+    // --- 메인 화면 배차 캘린더 뷰 ---
+    let calYear = 2026, calMonth = 10, calInit = false;
+    window.setDispatchView = function(v) {
+      state.dispatchView = v;
+      saveState();
+      renderDispatchViewMode();
+      renderDispatchCalendar();
+    };
+    function renderDispatchViewMode() {
+      const isCal = (state.dispatchView || 'calendar') !== 'list';
+      const cal = byId('dispatch-calendar-view'), list = byId('dispatch-list-view');
+      if (cal) cal.classList.toggle('hidden', !isCal);
+      if (list) list.classList.toggle('hidden', isCal);
+      const on = 'px-2.5 py-1.5 text-xs font-extrabold bg-aptiv-navy text-white';
+      const off = 'px-2.5 py-1.5 text-xs font-extrabold bg-white text-slate-600 hover:bg-slate-100';
+      const cb = byId('cal-view-btn'), lb = byId('list-view-btn');
+      if (cb) cb.className = isCal ? on : off;
+      if (lb) lb.className = isCal ? off : on;
+    }
+    window.calMove = function(delta) {
+      calMonth += delta;
+      if (calMonth < 0) { calMonth = 11; calYear--; }
+      if (calMonth > 11) { calMonth = 0; calYear++; }
+      renderDispatchCalendar();
+    };
+    window.calToday = function() {
+      const n = new Date();
+      calYear = n.getFullYear();
+      calMonth = n.getMonth();
+      renderDispatchCalendar();
+    };
+    function renderDispatchCalendar() {
+      const grid = byId('dispatch-calendar-grid');
+      const title = byId('cal-title');
+      if (!grid || !title) return;
+      if (!calInit) {
+        const n = new Date();
+        calYear = n.getFullYear();
+        calMonth = n.getMonth();
+        calInit = true;
+      }
+      title.textContent = `${calYear}년 ${calMonth + 1}월`;
+      const startDow = new Date(calYear, calMonth, 1).getDay();
+      const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+      const nowD = new Date();
+      const nowStr = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, '0')}-${String(nowD.getDate()).padStart(2, '0')}`;
+      const dows = ['일', '월', '화', '수', '목', '금', '토'];
+      let html = dows.map(dw => `<div class="text-center text-[10px] font-extrabold text-slate-500 py-1">${dw}</div>`).join('');
+      for (let i = 0; i < startDow; i++) html += '<div class="min-h-[76px] rounded-lg bg-slate-50/60"></div>';
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayStart = parseDateMs(dateStr + 'T00:00:00');
+        const dayEnd = parseDateMs(dateStr + 'T23:59:59');
+        const items = state.dispatches.filter(d => {
+          if (state.selectedSiteId !== 'ALL' && d.siteId !== state.selectedSiteId) return false;
+          if (d.status === 'rejected') return false;
+          const s = parseDateMs(d.pickup), e = parseDateMs(d.returnAt);
+          if (!Number.isFinite(s) || !Number.isFinite(e)) return false;
+          return s <= dayEnd && e >= dayStart;
+        }).sort((a, b) => String(a.pickup || '').localeCompare(String(b.pickup || '')));
+
+        const chips = items.slice(0, 3).map(d => {
+          const t = d.dispType || computeDispatchType(d.pickup, d.returnAt);
+          const cls = d.status === 'pending' ? 'bg-amber-100 text-amber-900 border-amber-300'
+            : d.status === 'returned' ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+            : d.status === 'in_use' ? 'bg-blue-100 text-blue-900 border-blue-300'
+            : 'bg-sky-50 text-sky-900 border-sky-300';
+          const time = String(d.pickup || '').slice(11, 16);
+          const carModel = String(d.vehicleLabel || '').split(' (')[0];
+          return `<div title="${d.requester} · ${d.vehicleLabel} · ${fmtShortDt(d.pickup)}~${fmtShortDt(d.returnAt)} · ${d.purpose || ''}"
+            class="px-1 py-0.5 rounded border text-[9px] font-extrabold truncate ${cls}">
+            ${time ? time + ' ' : ''}${d.requester} · ${carModel}${t === '장기' ? ' [장기]' : ''}
+          </div>`;
+        }).join('');
+        const more = items.length > 3 ? `<div class="text-[9px] font-extrabold text-slate-400 px-1">+${items.length - 3}건 더</div>` : '';
+        html += `
+          <div class="min-h-[76px] rounded-lg border ${dateStr === nowStr ? 'border-aptiv-accent ring-1 ring-orange-300 bg-orange-50/30' : 'border-slate-200 bg-white'} p-1 space-y-0.5 overflow-hidden">
+            <div class="text-[10px] font-extrabold ${dateStr === nowStr ? 'text-orange-600' : 'text-slate-600'}">${day}</div>
+            ${chips}${more}
+          </div>`;
+      }
+      grid.innerHTML = html;
+    }
+
+    // =====================================================================
     // BOOTSTRAP & URL (?car=차량번호)
     // =====================================================================
     function bootApp() {
@@ -2070,6 +2578,7 @@
     }
 
     window.refreshVehicleAvailabilityCards = function() {
+      updateDispTypePreview();
       const siteId = byId('disp-site')?.value || '';
       const selectedCarId = byId('disp-vehicle')?.value || '';
       const pTs = parseDateMs(byId('disp-pickup')?.value);
@@ -2176,11 +2685,15 @@
         vehicleId: car.id,
         vehicleLabel: `${car.model} (${car.plate})`,
         requester: (byId('disp-requester')?.value || '').trim(),
+        dept: (byId('disp-dept')?.value || '').trim(),
         passengers: (byId('disp-passengers')?.value || '').trim(),
         pickup,
         returnAt,
         purpose: (byId('disp-purpose')?.value || '').trim(),
+        destination: (byId('disp-destination')?.value || '').trim(),
         manager: byId('disp-manager')?.value || (state.managers[0]?.name || '김용문 수석'),
+        dispType: computeDispatchType(pickup, returnAt),
+        approvalTrack: computeDispatchType(pickup, returnAt) === '장기' ? '상위 팀장 승인' : '공장 담당자 승인',
         status: state.isAdmin ? 'approved' : 'pending',
         returned: 'N',
         remark: (byId('disp-remark')?.value || '').trim()
@@ -2191,8 +2704,9 @@
       saveState();
 
       if (byId('disp-purpose')) byId('disp-purpose').value = '';
+      if (byId('disp-destination')) byId('disp-destination').value = '';
       if (byId('disp-remark')) byId('disp-remark').value = '';
-      showToast(`[${car.model} ${car.plate}] 배차 신청이 등록되었습니다.`, 'success');
+      showToast(`[${car.model} ${car.plate}] 배차 신청이 등록되었습니다. (${item.dispType} · ${item.approvalTrack})`, 'success');
       renderAll();
     };
 
@@ -2205,11 +2719,25 @@
       if (!match) return;
 
       if (byId('dep-driver')) byId('dep-driver').value = match.requester;
-      if (byId('dep-destination')) byId('dep-destination').value = match.purpose;
+      if (byId('dep-dept')) {
+        byId('dep-dept').value = match.dept || '';
+        setDepDeptLocked(!!match.dept);
+      }
+      if (byId('dep-destination')) byId('dep-destination').value = match.destination || match.purpose;
       if (byId('dep-purpose')) byId('dep-purpose').value = match.purpose;
       if (byId('dep-linked-dispatch-id')) byId('dep-linked-dispatch-id').value = match.id;
-      showToast(`[${match.requester}]님의 배차 정보가 입력되었습니다.`, 'info');
+      showToast(`[${match.requester}]님의 배차 정보가 입력되었습니다. (부서·목적지 자동 입력)`, 'info');
     };
+
+    function setDepDeptLocked(locked) {
+      const el = byId('dep-dept');
+      const badge = byId('dep-dept-auto-badge');
+      if (!el) return;
+      el.readOnly = locked;
+      el.classList.toggle('bg-slate-100', locked);
+      el.classList.toggle('text-slate-500', locked);
+      if (badge) badge.classList.toggle('hidden', !locked);
+    }
 
     window.submitDepartureLog = function(e) {
       if (e) e.preventDefault();
@@ -2254,6 +2782,7 @@
       }
 
       saveState();
+      setDepDeptLocked(false);
       if (byId('dep-destination')) byId('dep-destination').value = '';
       if (byId('dep-purpose')) byId('dep-purpose').value = '';
       if (byId('dep-linked-dispatch-id')) byId('dep-linked-dispatch-id').value = '';
@@ -2346,6 +2875,7 @@
         if (!fAmount || fAmount <= 0) { showToast('주유 내역: 결제 금액을 입력해 주세요.', 'warning'); return; }
         if (!fOdoRaw) { showToast('주유 내역: 주유 계기판(km)을 입력해 주세요.', 'warning'); return; }
         if (!fDriver) { showToast('주유 내역: 기록자를 입력해 주세요.', 'warning'); return; }
+        if (!(byId('arr-fuel-receipt-data')?.value)) { showToast('주유 내역: 주유 영수증 사진을 등록해야 운행이 종료됩니다.', 'warning'); return; }
 
         fuelRecord = {
           id: 'fuel_' + Date.now(),
@@ -2359,7 +2889,8 @@
           amount: fAmount,
           odometer: Number(fOdoRaw),
           driver: fDriver,
-          note: fNote
+          note: fNote,
+          receipt: byId('arr-fuel-receipt-data')?.value || ''
         };
       }
 
@@ -2395,6 +2926,7 @@
       ['arr-fuel-station', 'arr-fuel-liters', 'arr-fuel-amount', 'arr-fuel-odo', 'arr-fuel-driver', 'arr-fuel-note'].forEach(fid => {
         if (byId(fid)) byId(fid).value = '';
       });
+      clearReceipt('arr-fuel-receipt-data', 'arr-fuel-receipt-preview');
       if (byId('arr-fuel-date')) byId('arr-fuel-date').value = new Date().toISOString().slice(0, 10);
       handleArrFuelToggle();
       showToast(fuelRecord
@@ -2432,7 +2964,8 @@
         amount: Number(byId('fuel-amount')?.value || 0),
         odometer: Number(byId('fuel-odo')?.value || car.odometer || 0),
         driver: (byId('fuel-driver')?.value || '').trim(),
-        note: (byId('fuel-note')?.value || '').trim()
+        note: (byId('fuel-note')?.value || '').trim(),
+        receipt: byId('fuel-receipt-data')?.value || ''
       };
 
       state.fuels.unshift(fuel);
@@ -2442,6 +2975,7 @@
       if (byId('fuel-liters')) byId('fuel-liters').value = '';
       if (byId('fuel-amount')) byId('fuel-amount').value = '';
       if (byId('fuel-note')) byId('fuel-note').value = '';
+      clearReceipt('fuel-receipt-data', 'fuel-receipt-preview');
       showToast(`[${car.plate}] 주유/정비 기록(${fmtNum(fuel.amount)}원)이 저장되었습니다.`, 'success');
       renderAll();
     };
@@ -2450,12 +2984,19 @@
     // TAB 3 ADMIN ACTIONS: DISPATCH, VEHICLES, SITES, MANAGERS, RECORDS
     // =====================================================================
     window.adminApproveDispatch = function(dispId) {
-      if (!state.isAdmin) return;
+      if (!state.isAdmin && !state.isLeader) return;
       const item = state.dispatches.find(d => d.id === dispId);
       if (!item) return;
+      const type = item.dispType || computeDispatchType(item.pickup, item.returnAt);
+      if (type === '장기' && !state.isLeader) {
+        showToast('장기 배차(24시간 초과)는 상위 팀장만 승인할 수 있습니다. 상단 [팀장 모드]로 로그인해 주세요.', 'error');
+        return;
+      }
       item.status = 'approved';
+      item.approvedBy = type === '장기' ? (item.manager || '상위 팀장') : (item.manager || '공장 담당자');
+      item.approvedAt = new Date().toISOString().slice(0, 16).replace('T', ' ');
       saveState();
-      showToast('배차가 승인되었습니다.', 'success');
+      showToast(`[${type}] 배차가 승인되었습니다. (승인: ${item.approvedBy})`, 'success');
       renderAll();
     };
 
@@ -2648,6 +3189,8 @@
       if (byId('adm-mgr-id')) byId('adm-mgr-id').value = mgr.id;
       if (byId('adm-mgr-name')) byId('adm-mgr-name').value = mgr.name;
       if (byId('adm-mgr-role')) byId('adm-mgr-role').value = mgr.role;
+      if (byId('adm-mgr-site')) byId('adm-mgr-site').value = mgr.siteId || '';
+      if (byId('adm-mgr-level')) byId('adm-mgr-level').value = mgr.level || 'site';
 
       if (byId('adm-mgr-submit-btn')) byId('adm-mgr-submit-btn').textContent = '수정 저장';
       byId('adm-mgr-cancel-btn')?.classList.remove('hidden');
@@ -2657,6 +3200,8 @@
       if (byId('adm-mgr-id')) byId('adm-mgr-id').value = '';
       if (byId('adm-mgr-name')) byId('adm-mgr-name').value = '';
       if (byId('adm-mgr-role')) byId('adm-mgr-role').value = '';
+      if (byId('adm-mgr-site')) byId('adm-mgr-site').value = '';
+      if (byId('adm-mgr-level')) byId('adm-mgr-level').value = 'site';
       if (byId('adm-mgr-submit-btn')) byId('adm-mgr-submit-btn').textContent = '+ 저장';
       byId('adm-mgr-cancel-btn')?.classList.add('hidden');
     };
@@ -2667,6 +3212,8 @@
       const editId = byId('adm-mgr-id')?.value || '';
       const name = (byId('adm-mgr-name')?.value || '').trim();
       const role = (byId('adm-mgr-role')?.value || '').trim();
+      const siteId = byId('adm-mgr-site')?.value || '';
+      const level = byId('adm-mgr-level')?.value || 'site';
 
       if (!name || !role) return;
 
@@ -2675,10 +3222,12 @@
         if (mgr) {
           mgr.name = name;
           mgr.role = role;
+          mgr.siteId = siteId;
+          mgr.level = level;
           showToast(`담당자 [${name}] 정보가 수정되었습니다.`, 'success');
         }
       } else {
-        state.managers.push({ id: 'mgr_' + Date.now(), name, role });
+        state.managers.push({ id: 'mgr_' + Date.now(), name, role, siteId, level });
         showToast(`담당자 [${name}]가 추가되었습니다.`, 'success');
       }
       saveState();
@@ -2757,12 +3306,13 @@
 
     window.exportDispatchCsv = function() {
       const rows = [
-        ['신청일', '사업장', '신청자', '탑승자', '수령일시', '반납일시', '배차차량', '출장목적/목적지', '담당자', '반납여부', '비고']
+        ['신청일', '사업장', '신청자', '부서', '탑승자', '수령일시', '반납일시', '배차차량', '출장목적', '목적지', '배차구분', '담당자', '반납여부', '비고']
       ];
       state.dispatches.forEach(d => {
         rows.push([
-          d.requestDate, d.siteName, d.requester, d.passengers,
-          d.pickup, d.returnAt, d.vehicleLabel, d.purpose,
+          d.requestDate, d.siteName, d.requester, d.dept || '', d.passengers,
+          d.pickup, d.returnAt, d.vehicleLabel, d.purpose, d.destination || '',
+          d.dispType || computeDispatchType(d.pickup, d.returnAt),
           d.manager, d.returned, d.remark
         ]);
       });
@@ -3028,8 +3578,10 @@
       }
 
       if (dispMgrSel) {
+        const siteId0 = dispSiteSel?.value || '';
+        const orderedMgrs = [...state.managers].sort((a, b) => (b.siteId === siteId0 ? 1 : 0) - (a.siteId === siteId0 ? 1 : 0));
         const curMgr = dispMgrSel.value;
-        dispMgrSel.innerHTML = state.managers.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+        dispMgrSel.innerHTML = orderedMgrs.map(m => `<option value="${m.name}">${m.name}${m.level === 'leader' ? ' (팀장)' : ''}</option>`).join('');
         if (curMgr && state.managers.some(m => m.name === curMgr)) dispMgrSel.value = curMgr;
       }
 
@@ -3047,6 +3599,8 @@
 
       refreshVehicleAvailabilityCards();
       renderDispatchLedger();
+      renderDispatchViewMode();
+      renderDispatchCalendar();
     }
 
     window.renderDispatchLedger = function() {
@@ -3057,12 +3611,12 @@
       const filtered = state.dispatches.filter(d => {
         if (state.selectedSiteId !== 'ALL' && d.siteId !== state.selectedSiteId) return false;
         if (!q) return true;
-        return [d.requester, d.passengers, d.vehicleLabel, d.purpose, d.manager, d.siteName, d.remark]
+        return [d.requester, d.passengers, d.vehicleLabel, d.purpose, d.destination, d.dept, d.manager, d.siteName, d.remark]
           .some(field => String(field || '').toLowerCase().includes(q));
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">표시할 배차 신청 내역이 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="py-8 text-center text-slate-400">표시할 배차 신청 내역이 없습니다.</td></tr>`;
         return;
       }
 
@@ -3070,13 +3624,20 @@
         const retBadge = d.returned === 'Y'
           ? `<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-[11px]">Y</span>`
           : `<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-extrabold text-[11px]">N</span>`;
+        const dispType = d.dispType || computeDispatchType(d.pickup, d.returnAt);
+        const typeBadge = dispType === '장기'
+          ? `<span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-extrabold text-[10px]">장기</span>`
+          : `<span class="px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 font-extrabold text-[10px]">단기</span>`;
+        const statusBadge = d.status === 'pending'
+          ? `<span class="px-1.5 py-0.5 rounded bg-amber-400 text-amber-950 font-extrabold text-[10px]">승인대기</span>`
+          : '';
 
         return `
           <tr class="hover:bg-slate-50/90 align-top">
             <td class="py-2.5 px-2.5 font-semibold text-slate-700 whitespace-nowrap">${d.requestDate || '-'}</td>
             <td class="py-2.5 px-2.5">
               <div class="font-extrabold text-slate-900">${d.requester}</div>
-              <div class="text-[11px] text-slate-500">${d.passengers}</div>
+              <div class="text-[11px] text-slate-500">${d.dept ? d.dept + ' · ' : ''}${d.passengers}</div>
             </td>
             <td class="py-2.5 px-2.5 whitespace-nowrap text-[11px]">
               <div><strong class="text-slate-700">수:</strong> ${fmtShortDt(d.pickup)}</div>
@@ -3086,7 +3647,9 @@
               <div class="font-extrabold text-blue-800">${d.vehicleLabel}</div>
               <div class="text-[10px] text-slate-500">${d.siteName || ''}</div>
             </td>
-            <td class="py-2.5 px-2.5 font-semibold text-slate-800">${d.purpose}</td>
+            <td class="py-2.5 px-2.5 font-semibold text-slate-800">${d.purpose || '-'}</td>
+            <td class="py-2.5 px-2.5 font-semibold text-slate-800 whitespace-nowrap">${d.destination || '-'}</td>
+            <td class="py-2.5 px-2.5 text-center whitespace-nowrap">${typeBadge}${statusBadge}</td>
             <td class="py-2.5 px-2.5 whitespace-nowrap font-bold text-slate-700">${d.manager}</td>
             <td class="py-2.5 px-2.5 text-center whitespace-nowrap">${retBadge}</td>
             <td class="py-2.5 px-2.5">
@@ -3192,9 +3755,12 @@
                 <td class="py-2 px-2.5 whitespace-nowrap">${f.fuelType} ${f.liters ? '(' + f.liters + 'L)' : ''}</td>
                 <td class="py-2 px-2.5 text-right font-extrabold text-orange-700 whitespace-nowrap">${fmtNum(f.amount)}원</td>
                 <td class="py-2 px-2.5 text-right font-mono whitespace-nowrap">${fmtNum(f.odometer)}km</td>
+                <td class="py-2 px-2.5 text-center whitespace-nowrap">${f.receipt
+                  ? `<button type="button" onclick="viewFuelReceipt('${f.id}')" class="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-extrabold"><i class="fa-solid fa-receipt text-orange-500"></i> 보기</button>`
+                  : '<span class="text-slate-300 font-bold">-</span>'}</td>
               </tr>
             `).join('')
-          : `<tr><td colspan="5" class="py-6 text-center text-slate-400">주유·정비 이력이 없습니다.</td></tr>`;
+          : `<tr><td colspan="6" class="py-6 text-center text-slate-400">주유·정비 이력이 없습니다.</td></tr>`;
       }
     }
 
@@ -3218,7 +3784,7 @@
       const topBadge = byId('pending-badge-top');
       const topText = byId('pending-badge-top-text');
       if (topBadge && topText) {
-        topBadge.classList.toggle('hidden', !(state.isAdmin && hasAny));
+        topBadge.classList.toggle('hidden', !((state.isAdmin || state.isLeader) && hasAny));
         topText.textContent = `승인 대기 ${pendings.length}건${dupPendings.length ? ` · 시간중복 ${dupPendings.length}건` : ''}`;
       }
 
@@ -3249,7 +3815,7 @@
     function renderAdminTab() {
       const gate = byId('admin-gate-box');
       const consoleBox = byId('admin-console-box');
-      if (!state.isAdmin) {
+      if (!state.isAdmin && !state.isLeader) {
         gate?.classList.remove('hidden');
         consoleBox?.classList.add('hidden');
         updatePendingAlerts();
@@ -3272,14 +3838,18 @@
 
       const admDispTbody = byId('admin-dispatch-tbody');
       if (admDispTbody) {
-        admDispTbody.innerHTML = state.dispatches.slice(0, 40).map(d => `
+        admDispTbody.innerHTML = state.dispatches.slice(0, 40).map(d => {
+          const type = d.dispType || computeDispatchType(d.pickup, d.returnAt);
+          const canApprove = type !== '장기' || state.isLeader;
+          return `
           <tr>
             <td class="py-2.5 px-2.5 whitespace-nowrap">${d.requestDate}</td>
-            <td class="py-2.5 px-2.5"><strong class="text-slate-900">${d.requester}</strong> <span class="text-slate-500">(${d.passengers})</span></td>
+            <td class="py-2.5 px-2.5"><strong class="text-slate-900">${d.requester}</strong>${d.dept ? ` <span class="text-[10px] font-bold text-slate-500">${d.dept}</span>` : ''} <span class="text-slate-500">(${d.passengers})</span></td>
             <td class="py-2.5 px-2.5 whitespace-nowrap text-[11px]">${fmtShortDt(d.pickup)} ~ ${fmtShortDt(d.returnAt)}
               ${d.status === 'pending' && dispatchHasTimeOverlap(d) ? '<span class="inline-block ml-1 px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px] font-extrabold">시간중복</span>' : ''}</td>
             <td class="py-2.5 px-2.5 font-bold text-blue-800 whitespace-nowrap">${d.vehicleLabel}</td>
-            <td class="py-2.5 px-2.5">${d.purpose}</td>
+            <td class="py-2.5 px-2.5">${d.purpose || '-'}${d.destination ? ` <span class="text-slate-400">→</span> <strong>${d.destination}</strong>` : ''}
+              <span class="inline-block ml-1 px-1.5 py-0.5 rounded ${type === '장기' ? 'bg-rose-100 text-rose-700' : 'bg-sky-100 text-sky-700'} text-[10px] font-extrabold">${type}</span></td>
             <td class="py-2.5 px-2.5 whitespace-nowrap">${d.manager}</td>
             <td class="py-2.5 px-2.5 text-center">
               <button type="button" onclick="adminToggleReturn('${d.id}')"
@@ -3289,12 +3859,12 @@
             </td>
             <td class="py-2.5 px-2.5 whitespace-nowrap space-x-1">
               ${d.status === 'pending'
-                ? `<button type="button" onclick="adminApproveDispatch('${d.id}')" class="px-2 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px]">승인</button>`
+                ? `<button type="button" onclick="adminApproveDispatch('${d.id}')" class="px-2 py-1 rounded ${canApprove ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-300 text-slate-600'} text-white font-bold text-[11px]">승인(${type === '장기' ? '팀장' : '담당자'})</button>`
                 : `<span class="text-[11px] font-bold text-slate-400">${d.status === 'returned' ? '반납완료' : '승인됨'}</span>`}
               <button type="button" onclick="adminDeleteDispatch('${d.id}')" class="px-2 py-1 rounded bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-[11px]">삭제</button>
             </td>
           </tr>
-        `).join('');
+        `;}).join('');
       }
 
       const admVehSiteSel = byId('adm-veh-site');
@@ -3345,20 +3915,34 @@
         `).join('');
       }
 
+      const admMgrSiteSel = byId('adm-mgr-site');
+      if (admMgrSiteSel) {
+        const cur = admMgrSiteSel.value;
+        admMgrSiteSel.innerHTML = `<option value="">전체/공통</option>` +
+          state.sites.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+        if (cur && state.sites.some(s => s.id === cur)) admMgrSiteSel.value = cur;
+      }
+
       const mgrList = byId('adm-managers-list');
       if (mgrList) {
-        mgrList.innerHTML = state.managers.map(m => `
+        mgrList.innerHTML = state.managers.map(m => {
+          const siteName = (state.sites.find(s => s.id === m.siteId) || {}).name || '전체/공통';
+          const lvl = m.level === 'leader'
+            ? `<span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 text-[10px] font-extrabold">상위 팀장 · 장기 승인</span>`
+            : `<span class="px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 text-[10px] font-extrabold">공장 담당자 · 단기 승인</span>`;
+          return `
           <div class="flex items-center justify-between px-4 py-2.5 bg-white text-xs sm:text-sm">
             <div>
               <strong class="font-extrabold text-slate-900">${m.name}</strong>
               <span class="text-xs text-slate-500 ml-2">${m.role}</span>
+              <div class="mt-0.5 flex items-center gap-1.5">${lvl}<span class="text-[10px] font-bold text-slate-400">${siteName}</span></div>
             </div>
             <div class="flex items-center gap-1.5">
               <button type="button" onclick="editManagerItem('${m.id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold">수정</button>
               <button type="button" onclick="removeManagerItem('${m.id}')" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold">삭제</button>
             </div>
           </div>
-        `).join('');
+        `;}).join('');
       }
 
       const admTripsTbody = byId('adm-trips-tbody');
@@ -3394,12 +3978,15 @@
                 <td class="py-2 px-2.5">${f.station} (${f.fuelType})</td>
                 <td class="py-2 px-2.5 text-right font-extrabold whitespace-nowrap">${f.liters ? f.liters + 'L / ' : ''}${fmtNum(f.amount)}원</td>
                 <td class="py-2 px-2.5 text-right font-mono whitespace-nowrap">${fmtNum(f.odometer)} km</td>
+                <td class="py-2 px-2.5 text-center whitespace-nowrap">${f.receipt
+                  ? `<button type="button" onclick="viewFuelReceipt('${f.id}')" class="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-extrabold"><i class="fa-solid fa-receipt text-orange-500"></i> 보기</button>`
+                  : '<span class="text-slate-300 font-bold">-</span>'}</td>
                 <td class="py-2 px-2.5 text-center">
-                  <button type="button" onclick="deleteFuelRecord('${f.id}')" class="px-2 py-1 rounded bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-[11px]">삭제</button>
+                  <button type="button" onclick="deleteFuelRecord('${f.id}')" class="px-1.5 py-0.5 rounded bg-rose-100 hover:bg-rose-200 text-rose-700 text-[10px] font-bold">삭제</button>
                 </td>
               </tr>
             `).join('')
-          : `<tr><td colspan="6" class="py-6 text-center text-slate-400">주유 기록이 없습니다.</td></tr>`;
+          : `<tr><td colspan="7" class="py-6 text-center text-slate-400">주유 기록이 없습니다.</td></tr>`;
       }
 
       render2026FormSheet();
@@ -3478,6 +4065,9 @@
       bootApp();
     }
   </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
