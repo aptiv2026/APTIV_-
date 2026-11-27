@@ -1947,10 +1947,10 @@
       if (payload === lastPushHash) return;
       lastPushHash = payload;
       await cloudApi('/rest/v1/' + (cloudCfg.table || 'dispatch_state') + '?id=eq.main', {
-        method: 'PATCH', body: JSON.stringify({ data: state, updated_at: new Date().toISOString() })
+        method: 'PATCH', body: JSON.stringify({ data: Object.assign({}, state, { __cloudCfg: cloudCfg }), updated_at: new Date().toISOString() })
       }).catch(async () => {
         await cloudApi('/rest/v1/' + (cloudCfg.table || 'dispatch_state'), {
-          method: 'POST', body: JSON.stringify([{ id: 'main', data: state, updated_at: new Date().toISOString() }])
+          method: 'POST', body: JSON.stringify([{ id: 'main', data: Object.assign({}, state, { __cloudCfg: cloudCfg }), updated_at: new Date().toISOString() }])
         });
       });
     }
@@ -1961,18 +1961,29 @@
       if (rows && rows.length && rows[0].data) {
         const remote = rows[0].data;
         if (apply) applyingRemote = true;
-        mergeRemote(remote);
+        await mergeRemote(remote);
         if (apply) { applyingRemote = false; renderAll(); }
       }
     }
 
-    function mergeRemote(remote) {
+    async function mergeRemote(remote) {
       // 간단한 최신-우선 병합: 배열형 필드는 길이가 긴 쪽(더 많은 기록) 우선, 설정값은 원격 우선
       ['dispatches', 'trips', 'fuels', 'vehicles', 'sites', 'managers'].forEach(k => {
         if (Array.isArray(remote[k]) && (!Array.isArray(state[k]) || remote[k].length >= state[k].length)) state[k] = remote[k];
       });
       if (remote.adminPassword) state.adminPassword = remote.adminPassword;
       if (typeof remote.selectedSiteId === 'string') state.selectedSiteId = remote.selectedSiteId;
+      // 설정 자동 갱신: 같은 프로젝트(URL 동일)의 새 키가 행에 기록돼 있고 실제로 작동하면 채택
+      const rc = remote.__cloudCfg;
+      if (rc && rc.url && rc.key && cloudCfg && rc.url === cloudCfg.url) {
+        const cand = { url: rc.url, key: rc.key, table: rc.table || 'dispatch_state' };
+        if ((cand.key !== cloudCfg.key || cand.table !== (cloudCfg.table || 'dispatch_state')) && await cfgPing(cand)) {
+          cloudCfg = cand;
+          localStorage.setItem(CLOUD_KEY, JSON.stringify(cloudCfg));
+          cfgHistAdd(cloudCfg);
+          setCloudStatus('bg-slate-900/85 border-emerald-500 text-emerald-300', '클라우드 동기화 ON (설정 자동 갱신)');
+        }
+      }
     }
 
     async function cloudConnect() {
@@ -1992,13 +2003,17 @@
         await cloudApi('/rest/v1/' + table + '?id=eq.main&select=id');
         cloudOn = true;
         localStorage.setItem(CLOUD_KEY, JSON.stringify(cloudCfg));
+        cfgHistAdd(cloudCfg);
         setCloudStatus('bg-slate-900/85 border-emerald-500 text-emerald-300', '클라우드 동기화 ON');
         showToast('클라우드 동기화가 연결되었습니다. 모든 기기에서 같은 대장을 사용합니다.', 'success');
         closeModal('cloud-modal');
         await cloudPull(true);
         await cloudPush();
         if (cloudTimer) clearInterval(cloudTimer);
-        cloudTimer = setInterval(async () => { await cloudPull(true).catch(() => {}); }, 7000);
+        cloudTimer = setInterval(async () => {
+          try { await cloudPull(true); }
+          catch (e2) { cloudOn = false; if (cloudTimer) clearInterval(cloudTimer); cloudTimer = null; autoReconnect(); }
+        }, 7000);
       } catch (e) {
         setCloudStatus('bg-slate-900/85 border-rose-500 text-rose-300', '연결 실패');
         showToast('연결 실패: ' + e.message + ' — SQL 실행과 URL/key를 확인해 주세요.', 'error');
@@ -2022,31 +2037,69 @@
     };
 
     // 자동 재연결 (새로고침·재접속 시 조용히 복구 — 모달·토스트 없음)
+    // --- 설정 이력 & 자동 복구 (키 교체·링크 만료 대비) ---
+    const CFG_HIST_KEY = 'kum_cloud_cfg_hist_v1';
+    function cfgHist() { try { return JSON.parse(localStorage.getItem(CFG_HIST_KEY) || '[]') } catch (e) { return [] } }
+    function cfgHistAdd(cfg) {
+      if (!cfg || !cfg.url || !cfg.key) return;
+      let h = cfgHist().filter(x => !(x.url === cfg.url && x.key === cfg.key));
+      h.unshift({ url: cfg.url, key: cfg.key, table: cfg.table || 'dispatch_state', at: new Date().toISOString() });
+      try { localStorage.setItem(CFG_HIST_KEY, JSON.stringify(h.slice(0, 5))); } catch (e) {}
+    }
+    async function cfgPing(cfg) {
+      const saved = cloudCfg;
+      try { cloudCfg = cfg; await cloudApi('/rest/v1/' + (cfg.table || 'dispatch_state') + '?id=eq.main&select=id'); return true; }
+      catch (e) { return false; }
+      finally { cloudCfg = saved; }
+    }
+    async function applyConnected() {
+      cloudOn = true;
+      cfgHistAdd(cloudCfg);
+      setCloudStatus('bg-slate-900/85 border-emerald-500 text-emerald-300', '클라우드 동기화 ON');
+      await cloudPull(true).catch(() => {});
+      await cloudPush().catch(() => {});
+      if (cloudTimer) clearInterval(cloudTimer);
+      cloudTimer = setInterval(async () => {
+        try { await cloudPull(true); }
+        catch (e) { cloudOn = false; if (cloudTimer) clearInterval(cloudTimer); cloudTimer = null; autoReconnect(); }
+      }, 7000);
+    }
     async function autoReconnect() {
-      if (!cloudCfg.url || !cloudCfg.key || cloudOn) return;
-      try {
-        await cloudApi('/rest/v1/' + (cloudCfg.table || 'dispatch_state') + '?id=eq.main&select=id');
-        cloudOn = true;
-        setCloudStatus('bg-slate-900/85 border-emerald-500 text-emerald-300', '클라우드 동기화 ON');
-        await cloudPull(true).catch(() => {});
-        await cloudPush().catch(() => {});
-        if (cloudTimer) clearInterval(cloudTimer);
-        cloudTimer = setInterval(async () => { await cloudPull(true).catch(() => {}); }, 7000);
-      } catch (e) {
-        setCloudStatus('bg-slate-900/85 border-amber-500 text-amber-300', '재연결 시도 중...');
-        setTimeout(autoReconnect, 15000);
+      if (cloudOn || !cloudCfg.url || !cloudCfg.key) return;
+      // 1) 현재 설정 시도
+      if (await cfgPing(cloudCfg)) { await applyConnected(); return; }
+      // 2) 키가 교체됐으면 이력의 다른 연결 정보를 순회 — 작동하는 것으로 자동 복구
+      for (const c of cfgHist()) {
+        if (c.url === cloudCfg.url && c.key === cloudCfg.key) continue;
+        if (await cfgPing(c)) {
+          cloudCfg = { url: c.url, key: c.key, table: c.table || 'dispatch_state' };
+          localStorage.setItem(CLOUD_KEY, JSON.stringify(cloudCfg));
+          await applyConnected();
+          showToast('연결 정보가 만료되어 이전 설정으로 자동 복구했습니다.', 'success');
+          return;
+        }
       }
+      setCloudStatus('bg-slate-900/85 border-amber-500 text-amber-300', '재연결 시도 중... (키 교체 시 새 링크로 갱신)');
+      setTimeout(autoReconnect, 15000);
     }
     // URL ?cloud= 파라미터 → 새 기기(휴대폰) 첫 접속 시 설정 자동 저장 후 자동 연결
-    (function importCloudParam(){
+    (async function importCloudParam(){
       try {
         const m = (window.location.search || '').match(/[?&]cloud=([^&]+)/);
         if (!m) return;
-        const cfg = JSON.parse(decodeURIComponent(escape(atob(m[1]))));
-        if (cfg.u && cfg.k) {
-          cloudCfg = { url: cfg.u, key: cfg.k, table: cfg.t || 'dispatch_state' };
+        history.replaceState(null, '', window.location.pathname);
+        let cfg = null;
+        try { cfg = JSON.parse(decodeURIComponent(escape(atob(m[1])))); } catch (e) {}
+        if (!cfg || !cfg.u || !cfg.k) return;
+        const cand = { url: cfg.u, key: cfg.k, table: cfg.t || 'dispatch_state' };
+        const same = cloudCfg && cloudCfg.url === cand.url && cloudCfg.key === cand.key;
+        if (await cfgPing(cand)) {
+          cloudCfg = cand;
           localStorage.setItem(CLOUD_KEY, JSON.stringify(cloudCfg));
-          history.replaceState(null, '', window.location.pathname);
+          cfgHistAdd(cand);
+          if (!cloudOn) { setCloudStatus('bg-slate-900/85 border-amber-500 text-amber-300', '재연결 시도 중...'); autoReconnect(); }
+        } else if (!same && cloudCfg.url && cloudCfg.key) {
+          showToast('링크의 연결 정보가 만료되어 기존 설정을 유지합니다.', 'warning');
         }
       } catch (e) {}
     })();
