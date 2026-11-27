@@ -1360,6 +1360,19 @@
   </div>
 
   <!-- AI Fleet Assistant Modal -->
+  <div id="cal-day-modal" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4" onclick="if(event.target===this)closeCalDay()">
+    <div class="bg-white rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <h3 id="cal-day-title" class="text-base font-extrabold text-slate-900">그날 배차</h3>
+        <button onclick="closeCalDay()" class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 font-bold">✕</button>
+      </div>
+      <div id="cal-day-body" class="px-5 py-4 overflow-y-auto space-y-2"></div>
+      <div class="px-5 py-3 border-t border-slate-100 text-right">
+        <button onclick="closeCalDay()" class="px-4 py-2 rounded-xl bg-aptiv-navy text-white text-xs font-extrabold">닫기</button>
+      </div>
+    </div>
+  </div>
+
   <div id="ai-assistant-modal" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -2345,13 +2358,41 @@
         }).join('');
         const more = items.length > 3 ? `<div class="text-[9px] font-extrabold text-slate-400 px-1">+${items.length - 3}건 더</div>` : '';
         html += `
-          <div class="min-h-[76px] rounded-lg border ${dateStr === nowStr ? 'border-aptiv-accent ring-1 ring-orange-300 bg-orange-50/30' : 'border-slate-200 bg-white'} p-1 space-y-0.5 overflow-hidden">
+          <div onclick="calDayDetail('${dateStr}')" class="min-h-[76px] rounded-lg border cursor-pointer hover:border-blue-400 transition-colors ${dateStr === nowStr ? 'border-aptiv-accent ring-1 ring-orange-300 bg-orange-50/30' : 'border-slate-200 bg-white'} p-1 space-y-0.5 overflow-hidden">
             <div class="text-[10px] font-extrabold ${dateStr === nowStr ? 'text-orange-600' : 'text-slate-600'}">${day}</div>
             ${chips}${more}
           </div>`;
       }
       grid.innerHTML = html;
     }
+    // --- 캘린더 날짜 클릭 → 그날 배차 상세 모달 ---
+    window.closeCalDay = function() { byId('cal-day-modal').classList.add('hidden'); };
+    window.calDayDetail = function(dateStr) {
+      const dayStart = parseDateMs(dateStr + 'T00:00:00'), dayEnd = parseDateMs(dateStr + 'T23:59:59');
+      const items = state.dispatches.filter(d => {
+        if (state.selectedSiteId !== 'ALL' && d.siteId !== state.selectedSiteId) return false;
+        if (d.status === 'rejected') return false;
+        const s = parseDateMs(d.pickup), e2 = parseDateMs(d.returnAt);
+        if (!Number.isFinite(s) || !Number.isFinite(e2)) return false;
+        return s <= dayEnd && e2 >= dayStart;
+      }).sort((a, b) => String(a.pickup || '').localeCompare(String(b.pickup || '')));
+      byId('cal-day-title').textContent = `${dateStr} 배차 상세 (${items.length}건)`;
+      const ST = { pending: ['대기승인', 'bg-amber-100 text-amber-900'], approved: ['승인', 'bg-blue-100 text-blue-900'], in_use: ['운행중', 'bg-sky-100 text-sky-900'], returned: ['반납', 'bg-emerald-100 text-emerald-900'] };
+      byId('cal-day-body').innerHTML = items.length ? items.map(d => {
+        const tag = ST[d.status] || ['-', 'bg-slate-100 text-slate-700'];
+        const car = String(d.vehicleLabel || '').split(' (')[0], plate = (String(d.vehicleLabel || '').match(/\(([^)]+)\)/) || ['', ''])[1];
+        return `<div class="rounded-xl border border-slate-200 p-3">
+          <div class="flex justify-between gap-2 items-center">
+            <b class="text-xs text-slate-900 truncate">${car} <span class="font-mono text-blue-700">${plate}</span></b>
+            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full ${tag[1]} whitespace-nowrap">${tag[0]}</span>
+          </div>
+          <div class="text-[11px] text-slate-600 mt-1.5">⏰ ${fmtShortDt(d.pickup)} ~ ${fmtShortDt(d.returnAt)}</div>
+          <div class="text-[11px] text-slate-600">👤 ${d.requester || ''}${d.dept ? ' · ' + d.dept : ''}${d.passengers ? ' · 탑승: ' + d.passengers : ''}</div>
+          <div class="text-[11px] text-slate-600">📍 ${d.destination || d.purpose || '-'}${d.manager ? ' · 담당: ' + d.manager : ''}${d.siteName ? ' · ' + d.siteName : ''}</div>
+        </div>`;
+      }).join('') : '<div class="py-10 text-center text-sm text-slate-400">이 날 등록된 배차가 없습니다.</div>';
+      byId('cal-day-modal').classList.remove('hidden');
+    };
 
     // =====================================================================
     // BOOTSTRAP & URL (?car=차량번호)
@@ -2647,7 +2688,7 @@
       }).join('');
     };
 
-    window.submitDispatchForm = function(e) {
+    window.submitDispatchForm = async function(e) {
       if (e) e.preventDefault();
       const siteId = byId('disp-site')?.value || '';
       const site = state.sites.find(s => s.id === siteId) || state.sites[0];
@@ -2667,6 +2708,8 @@
         showToast('반납일/시간은 수령일/시간 이후여야 합니다.', 'error');
         return;
       }
+      // 클라우드 동기화 중이면 신청 직전 최신 대장을 받아와 중복 검사 정확도를 높임
+      if (cloudOn && typeof cloudPull === 'function') { try { await cloudPull(false); } catch (_) {} }
 
       const conflict = getVehicleConflict(car.id, pTs, rTs);
       if (conflict && !state.isAdmin) {
@@ -4065,6 +4108,7 @@
       bootApp();
     }
   </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
